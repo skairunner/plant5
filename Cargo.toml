@@ -1,0 +1,15 @@
+[package]
+name = "plant5"
+version = "0.1.0"
+authors = ["sky"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "~1.0"
+bevy = "0.4"
+gamma = { git = "https://github.com/skairunner/gamma.git", branch = "removeable"}
+log = "~0.4"
+maplit = "~1.0"
+simplelog = "~0.9"

@@ -104,33 +104,9 @@ pub struct Rule {
 }
 
 impl Rule {
-    /// Attempt to apply the rule to the graph as many times as possible.
-    /// When applying rules, we don't match the "from" against dirty nodes/edges,
-    /// i.e. nodes/edges that have already been replaced by a rule.
-    pub fn apply(&self, graph: &mut RggGraph) {}
-
-    /// Match the From rules against the graph.
-    fn do_match(&self, graph: &RggGraph) {
-        // Build a simple graph that contains the edge relations of the ruleset.
-        let relations = self.from.as_graph();
-
-        let mut state = MatchingState::new(self, graph);
-
-        // Map from rule index to graph id
-        let mut node_mapping = HashMap::new();
-        // The ruleset node index
-        let mut node_index_to_match = 0;
-        // For now, match purely structure.
-        for node in graph.graph.nodes() {
-            if self.from.nodes[node_index_to_match].match_node(&graph.values[node]) {
-                node_mapping.insert(node_index_to_match, *node);
-                node_index_to_match += 1;
-            }
-        }
+    pub fn matches<'a>(&'a self, graph: &'a RggGraph) -> MatchingState<'a> {
+        MatchingState::new(&self, graph)
     }
-
-    /// Grow the set of rulenodes that were matched to graphnodes, checking against relations as well as the node itself.
-    fn add_node(&self, graph: &RggGraph) {}
 }
 
 enum MatchingDecision {
@@ -140,7 +116,9 @@ enum MatchingDecision {
 }
 
 /// Hold state for matching function.
-struct MatchingState {
+struct MatchingState<'a> {
+    graph: &'a RggGraph,
+    rule: &'a Rule,
     /// The necessary relations (between rule nodes) for a match.
     /// Uses the rule node id.
     relations: DefaultGraph,
@@ -154,11 +132,13 @@ struct MatchingState {
     graph_nodes: Vec<usize>,
 }
 
-impl MatchingState {
-    pub fn new(rule: &Rule, graph: &RggGraph) -> Self {
+impl<'a> MatchingState<'a> {
+    pub fn new(rule: &'a Rule, graph: &'a RggGraph) -> Self {
         let relations = rule.from.as_graph();
 
         Self {
+            graph,
+            rule,
             relations,
             mapping: HashMap::new(),
             pattern_index: 0,
@@ -221,7 +201,7 @@ impl MatchingState {
     }
 
     /// For the current match, check that it satisfies the edges required.
-    pub fn check_edges(&mut self, rules: &Rule, rgg: &RggGraph) -> anyhow::Result<bool> {
+    pub fn check_edges(&mut self, rules: &Rule) -> anyhow::Result<bool> {
         if (self.pattern_index as usize) < rules.from.nodes.len() {
             panic!("Didn't map all the nodes");
         }
@@ -239,13 +219,41 @@ impl MatchingState {
         Ok(true)
     }
 
-    /// Once we verify a match, we can reset to find further matches
+    /// Once we verify a match, we can reset to find further matches by removing the mapping.
     pub fn reset_match(&mut self) {
         self.pattern_index -= 1;
         let r = self.mapping.remove(&self.pattern_index);
         if r.is_none() {
             log::info!("Tried to reset but there was nothing to reset.");
         }
+    }
+}
+
+impl Iterator for MatchingState<'_> {
+    type Item = HashMap<i32, usize>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let result = self.continue_search(self.rule, self.graph);
+            match result {
+                MatchingDecision::NoMatch => return None,
+                MatchingDecision::Mapped => {
+                    let result = self.check_edges(self.rule);
+                    match &result {
+                        Err(e) => panic!("{:?}", e),
+                        Ok(r) => {
+                            if *r {
+                                break;
+                            } else {
+                                self.reset_match()
+                            }
+                        }
+                    }
+                }
+                MatchingDecision::Continue => {}
+            }
+        }
+        Some(self.mapping.clone())
     }
 }
 
@@ -333,7 +341,7 @@ mod tests {
         let mut matcher = MatchingState::new(&rule, &graph);
         matcher.continue_search(&rule, &graph);
         assert_eq!(matcher.pattern_index, 1);
-        assert!(matcher.check_edges(&rule, &graph).unwrap());
+        assert!(matcher.check_edges(&rule).unwrap());
         assert_eq!(matcher.mapping, hashmap! { 0 => 0 });
     }
 
@@ -346,30 +354,15 @@ mod tests {
 
         let rule = get_test_rule();
         let graph = get_test_graph();
-        let mut matcher = MatchingState::new(&rule, &graph);
+        let mut matcher = rule.matches(&graph);
+        let matched = matcher.next();
 
-        loop {
-            let result = matcher.continue_search(&rule, &graph);
-            match result {
-                MatchingDecision::NoMatch => break,
-                MatchingDecision::Mapped => {
-                    let result = matcher.check_edges(&rule, &graph);
-                    match &result {
-                        Err(e) => panic!("{:?}", e),
-                        Ok(r) => {
-                            if *r {
-                                break;
-                            } else {
-                                log::info!("Edges did not match for mapping {:?}", matcher.mapping);
-                                matcher.reset_match()
-                            }
-                        }
-                    }
-                }
-                MatchingDecision::Continue => {}
+        match matched {
+            None => panic!("No matches found"),
+            Some(m) => {
+                assert_eq!(matcher.pattern_index, 2);
+                assert_eq!(m, hashmap! { 0 => 0, 1 => 1 });
             }
         }
-        assert_eq!(matcher.pattern_index, 2);
-        assert_eq!(matcher.mapping, hashmap! { 0 => 0, 1 => 1 });
     }
 }
