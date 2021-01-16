@@ -160,7 +160,7 @@ impl Iterator for MatchingState<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rgg::rule::{FromNode, NodeSet, ToNode};
+    use crate::rgg::rule::{FromNode, NodeSet};
     use gamma::graph::AppendableGraph;
 
     /// This rule takes a generic node, then adds a new node.
@@ -173,21 +173,7 @@ mod tests {
             }],
             edges: vec![],
         };
-        let to = NodeSet {
-            nodes: vec![
-                ToNode {
-                    id: 0,
-                    name: None,
-                    values: Default::default(),
-                },
-                ToNode {
-                    id: 1,
-                    name: None,
-                    values: Default::default(),
-                },
-            ],
-            edges: vec![(0, 1)],
-        };
+        let to = vec![];
         Rule { from, to }
     }
 
@@ -208,21 +194,7 @@ mod tests {
             ],
             edges: vec![(0, 1)],
         };
-        let to = NodeSet {
-            nodes: vec![
-                ToNode {
-                    id: 0,
-                    name: None,
-                    values: Default::default(),
-                },
-                ToNode {
-                    id: 1,
-                    name: None,
-                    values: Default::default(),
-                },
-            ],
-            edges: vec![(0, 1)],
-        };
+        let to = vec![];
         Rule { from, to }
     }
 

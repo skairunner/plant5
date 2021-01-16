@@ -4,6 +4,7 @@
 mod dirty_graph;
 pub mod matcher;
 pub mod node;
+mod procedures;
 mod rgg_graph;
 mod rule;
 

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Clone, Debug)]
 /// Represents the values stored in a node in an RGG.
 pub struct Node {
     pub name: String,
@@ -15,11 +16,13 @@ impl Node {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum RGGType {
     Int,
     Float,
 }
 
+#[derive(Clone, Debug)]
 pub struct Value {
     raw_value: *mut i32,
     rgg_type: RGGType,

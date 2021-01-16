@@ -64,6 +64,20 @@ impl DirtyGraph {
             None => false,
         }
     }
+
+    /// Returns true if the node is dirty, aka the node's generation is the same as
+    /// self.next_generation
+    pub fn node_is_dirty(&self, node: usize) -> bool {
+        if !self.nodes.contains(&node) {
+            return false;
+        }
+        let gen = match self.node_generation.get(&node) {
+            Some(gen) => *gen,
+            None => return false,
+        };
+
+        gen >= self.next_generation
+    }
 }
 
 impl Graph for DirtyGraph {
@@ -130,7 +144,7 @@ impl AppendableGraph for DirtyGraph {
         }
 
         self.nodes.insert(id);
-        self.node_generation.insert(id, 0);
+        self.node_generation.insert(id, self.next_generation);
         self.adjacency.insert(id, vec![]);
 
         Ok(())
@@ -138,6 +152,8 @@ impl AppendableGraph for DirtyGraph {
 
     fn add_edge(&mut self, sid: usize, tid: usize) -> Result<(), Error> {
         self.edges.insert(new_edge(sid, tid));
+        self.edge_generation
+            .insert((sid, tid), self.next_generation);
         self.add_to_adjacency(sid, tid);
         self.add_to_adjacency(tid, sid);
         Ok(())

@@ -1,6 +1,6 @@
 use crate::rgg::dirty_graph::DirtyGraph;
 use crate::rgg::Node;
-use gamma::graph::AppendableGraph;
+use gamma::graph::{AppendableGraph, RemovableGraph};
 use std::collections::HashMap;
 
 pub struct RggGraph {
@@ -20,5 +20,16 @@ impl RggGraph {
         let n = self.graph.add_node().unwrap();
         self.values.insert(n, Node::new(""));
         n
+    }
+
+    pub fn insert_node_with(&mut self, node: Node) -> usize {
+        let n = self.graph.add_node().unwrap();
+        self.values.insert(n, node);
+        n
+    }
+
+    pub fn remove_node(&mut self, id: usize) {
+        self.graph.remove_node(id);
+        self.values.remove_entry(&id);
     }
 }

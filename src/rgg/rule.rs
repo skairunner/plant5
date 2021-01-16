@@ -1,3 +1,4 @@
+use crate::rgg::procedures::Procedure;
 use crate::rgg::{Node, Value};
 use gamma::graph::{AppendableGraph, DefaultGraph};
 use std::collections::HashMap;
@@ -99,5 +100,5 @@ impl<T: HasId> NodeSet<T> {
 /// Describes a replacement rule.
 pub struct Rule {
     pub from: NodeSet<FromNode>,
-    pub to: NodeSet<ToNode>,
+    pub to: Vec<Procedure>,
 }
