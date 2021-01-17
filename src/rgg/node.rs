@@ -16,6 +16,12 @@ impl Node {
     }
 }
 
+impl Default for Node {
+    fn default() -> Self {
+        Self::new("")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum RGGType {
     Int,

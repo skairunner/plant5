@@ -9,6 +9,7 @@ fn new_edge(node1: usize, node2: usize) -> (usize, usize) {
     }
 }
 
+#[derive(Debug)]
 /// An implementation of the gamma::Graph API that supports associating an integer to nodes and edges.
 /// Essentially, this allows keeping track of whether a node/edge was already touched this iteration.
 pub struct DirtyGraph {
@@ -52,6 +53,16 @@ impl DirtyGraph {
     fn contains_edge(&self, sid: usize, tid: usize) -> bool {
         let edge = new_edge(sid, tid);
         self.edges.contains(&edge)
+    }
+
+    /// Increment the generation, resetting if required.
+    pub fn advance_generation(&mut self) {
+        self.next_generation += 1;
+        if self.next_generation == 255 {
+            self.node_generation.values_mut().for_each(|mut v| *v = 0);
+            self.edge_generation.values_mut().for_each(|mut v| *v = 0);
+            self.next_generation = 1;
+        }
     }
 
     /// Set the given node as dirty. Returns false if the node didn't exist.

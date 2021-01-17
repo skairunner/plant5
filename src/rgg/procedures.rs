@@ -65,7 +65,8 @@ impl Procedure {
                     log::warn!("Tried to delete a node that was already deleted")
                 }
                 CheckDirty::Clean(target) => {
-                    graph.graph.remove_node(target);
+                    graph.remove_node(target);
+                    mapping.remove(&proc.target);
                 }
             },
             Procedure::Replace(proc) => match Self::get_if_not_dirty(proc.target, graph, mapping) {
@@ -82,11 +83,12 @@ impl Procedure {
                 for neighbor in &proc.neighbors {
                     match mapping.get(&neighbor) {
                         Some(neighbor) => {
-                            graph.graph.add_edge(node_id, *neighbor);
+                            graph.graph.add_edge(node_id, *neighbor).unwrap();
                         }
-                        None => panic!(
+                        None => log::warn!(
                             "Could not find specified neighbor {} in mapping {:?}",
-                            neighbor, mapping
+                            neighbor,
+                            mapping
                         ),
                     }
                 }
@@ -122,9 +124,67 @@ impl Procedure {
                 }
                 let node_id = mapping[&proc.final_node];
                 for neighbor in neighbors {
-                    graph.graph.add_edge(node_id, neighbor);
+                    graph.graph.add_edge(node_id, neighbor).unwrap();
                 }
             }
         };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::rgg::rgg_graph::RggGraph;
+    use crate::rgg::Node;
+    use gamma::graph::{AppendableGraph, Graph};
+    use std::collections::HashMap;
+
+    /// Gets a triangle graph with all nodes connected, plus its associated mapping
+    fn get_simple_graph() -> (RggGraph, HashMap<i32, usize>) {
+        let mut graph = RggGraph::new();
+        graph.insert_node();
+        graph.insert_node();
+        graph.insert_node();
+        graph.graph.add_edge(0, 1).unwrap();
+        graph.graph.add_edge(1, 2).unwrap();
+        graph.graph.add_edge(2, 0).unwrap();
+        graph.graph.advance_generation();
+
+        let map = maplit::hashmap! {
+            2 => 0,
+            1 => 1,
+            0 => 2,
+        };
+
+        (graph, map)
+    }
+
+    #[test]
+    fn test_simple_add() {
+        let proc = Procedure::Add(AddProcedure {
+            neighbors: vec![0, 1],
+            new_node: Node::new("newnode"),
+        });
+        let (mut graph, mut mapping) = get_simple_graph();
+        proc.apply(&mut graph, &mut mapping);
+        assert_eq!(graph.values[&3].name, "newnode");
+        let mut neighbors = graph
+            .graph
+            .neighbors(3)
+            .unwrap()
+            .map(|id| *id)
+            .collect::<Vec<_>>();
+        neighbors.sort();
+        assert_eq!(neighbors, vec![1, 2]);
+    }
+
+    #[test]
+    fn test_simple_delete() {
+        let proc = Procedure::Delete(DeleteProcedure { target: 2 });
+        let (mut graph, mut mapping) = get_simple_graph();
+        proc.apply(&mut graph, &mut mapping);
+        assert_eq!(graph.graph.order(), 2, "Contents {:?}", graph.graph);
+        assert_eq!(graph.values.len(), 2, "Contents {:?}", graph.values);
     }
 }
