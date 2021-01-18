@@ -9,14 +9,14 @@ impl Rule {
     }
 }
 
-enum MatchingDecision {
+pub enum MatchingDecision {
     NoMatch,
     Continue,
     Mapped,
 }
 
 /// Hold state for matching function.
-struct MatchingState<'a> {
+pub struct MatchingState<'a> {
     graph: &'a RggGraph,
     rule: &'a Rule,
     /// The necessary relations (between rule nodes) for a match.

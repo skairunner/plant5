@@ -1,10 +1,15 @@
 use crate::rgg::rgg_graph::RggGraph;
 use crate::rgg::Node;
-use gamma::graph::{AppendableGraph, Graph, RemovableGraph};
+
 use std::collections::{HashMap, HashSet};
+
+use gamma::graph::{AppendableGraph, Graph, RemovableGraph};
+use serde::Deserialize;
 
 /// Rules to follow to go from LHS to RHS
 /// CBA to figure out double pushout so i will instead "cheat" by having a procedure to follow
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum Procedure {
     Delete(DeleteProcedure),
     Replace(ReplaceProcedure),
@@ -12,21 +17,27 @@ pub enum Procedure {
     Merge(MergeProcedure),
 }
 
+#[derive(Debug)]
 pub struct DeleteProcedure {
     pub target: i32,
 }
 
+#[derive(Deserialize, Debug)]
 pub struct ReplaceProcedure {
     pub target: i32,
+    #[serde(rename = "replace")]
     pub replacement: Node,
 }
 
+#[derive(Deserialize, Debug)]
 pub struct AddProcedure {
     /// All the nodes that this new node should have an edge to
     pub neighbors: Vec<i32>,
+    #[serde(rename = "node")]
     pub new_node: Node,
 }
 
+#[derive(Deserialize, Debug)]
 pub struct MergeProcedure {
     /// All the nodes to merge
     pub targets: Vec<i32>,

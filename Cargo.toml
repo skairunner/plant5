@@ -12,4 +12,6 @@ bevy = "0.4"
 gamma = { git = "https://github.com/skairunner/gamma.git", branch = "removeable"}
 log = "~0.4"
 maplit = "~1.0"
+serde = "~1.0"
+serde_yaml = "~0.8"
 simplelog = "~0.9"

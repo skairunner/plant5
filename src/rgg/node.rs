@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Deserialize)]
 /// Represents the values stored in a node in an RGG.
 pub struct Node {
     pub name: String,
@@ -30,8 +32,8 @@ pub enum RGGType {
 
 #[derive(Clone, Debug)]
 pub struct Value {
-    raw_value: *mut i32,
-    rgg_type: RGGType,
+    pub(super) raw_value: *mut i32,
+    pub(super) rgg_type: RGGType,
 }
 
 impl Drop for Value {
@@ -51,6 +53,21 @@ impl Value {
         Self {
             raw_value: pointer,
             rgg_type: value_type,
+        }
+    }
+
+    pub fn new_int(i: i32) -> Self {
+        Self {
+            raw_value: Box::into_raw(Box::new(i)),
+            rgg_type: RGGType::Int,
+        }
+    }
+
+    pub fn new_float(f: f32) -> Self {
+        let p = Box::into_raw(Box::new(f));
+        Self {
+            raw_value: p as *mut i32,
+            rgg_type: RGGType::Float,
         }
     }
 
@@ -74,6 +91,18 @@ impl Value {
             self.raw_value.drop_in_place();
             self.raw_value = &mut v as *mut i32;
         }
+    }
+}
+
+impl From<f32> for Value {
+    fn from(f: f32) -> Self {
+        Value::new_float(f)
+    }
+}
+
+impl From<i32> for Value {
+    fn from(i: i32) -> Self {
+        Value::new_int(i)
     }
 }
 

@@ -7,5 +7,6 @@ pub mod node;
 mod procedures;
 mod rgg_graph;
 mod rule;
+mod serde;
 
 pub use node::{Node, Value};
