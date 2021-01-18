@@ -17,11 +17,6 @@ pub enum Condition {
     Range(Value, Value),
 }
 
-///
-pub enum PostCondition {
-    Exact(Value),
-}
-
 /// Identify a node to match against
 pub struct FromNode {
     /// Identify the node in the context of a rule
@@ -49,41 +44,19 @@ impl FromNode {
     }
 }
 
-impl HasId for FromNode {
-    fn get_id(&self) -> i32 {
-        self.id
-    }
-}
-
-/// Identify the output node
-pub struct ToNode {
-    /// Identify the node in the context of a rule
-    pub id: i32,
-    /// Identify the "name" of the node. Optional.
-    pub name: Option<String>,
-    /// Specify any potential values the node has.
-    pub values: HashMap<String, PostCondition>,
-}
-
-impl HasId for ToNode {
-    fn get_id(&self) -> i32 {
-        self.id
-    }
-}
-
 /// A defined node in a ruleset. Has an optional name, and may have edge connections.
-pub struct NodeSet<T: HasId> {
-    pub nodes: Vec<T>,
+pub struct NodeSet {
+    pub nodes: Vec<FromNode>,
     pub edges: Vec<(i32, i32)>,
 }
 
-impl<T: HasId> NodeSet<T> {
+impl NodeSet {
     /// Encode the node & edge relations as a graph
     pub fn as_graph(&self) -> DefaultGraph {
         let mut graph = DefaultGraph::new();
         for node in &self.nodes {
             graph
-                .add_node_with(node.get_id() as usize)
+                .add_node_with(node.id as usize)
                 .unwrap_or_else(|e| panic!("{:?}", e));
         }
 
@@ -99,6 +72,6 @@ impl<T: HasId> NodeSet<T> {
 
 /// Describes a replacement rule.
 pub struct Rule {
-    pub from: NodeSet<FromNode>,
+    pub from: NodeSet,
     pub to: Vec<Procedure>,
 }
