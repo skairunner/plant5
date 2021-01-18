@@ -1,21 +1,11 @@
 use crate::rgg::procedures::Procedure;
-use crate::rgg::{Node, Value};
+use crate::rgg::{Condition, Node, Value};
 use gamma::graph::{AppendableGraph, DefaultGraph};
 use serde::Deserialize;
 use std::collections::HashMap;
 
 pub trait HasId {
     fn get_id(&self) -> i32;
-}
-
-pub enum Condition {
-    Equals(Value),
-    LessThan(Value),
-    GreaterThan(Value),
-    LessThanOrEquals(Value),
-    GreaterThanOrEquals(Value),
-    /// Greater than Range.0, less than Range.1. Inclusive lower, exclusive upper.
-    Range(Value, Value),
 }
 
 /// Identify a node to match against

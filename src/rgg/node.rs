@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Formatter};
 
 #[derive(Clone, Debug, Deserialize)]
 /// Represents the values stored in a node in an RGG.
@@ -24,16 +25,27 @@ impl Default for Node {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RGGType {
     Int,
     Float,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Value {
     pub(super) raw_value: *mut i32,
     pub(super) rgg_type: RGGType,
+}
+
+impl Debug for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        unsafe {
+            f.debug_struct("Value")
+                .field("raw_value", &*self.raw_value)
+                .field("rgg_Type", &self.rgg_type)
+                .finish()
+        }
+    }
 }
 
 impl Drop for Value {
@@ -91,6 +103,12 @@ impl Value {
             self.raw_value.drop_in_place();
             self.raw_value = &mut v as *mut i32;
         }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { self.rgg_type == other.rgg_type && *self.raw_value == *other.raw_value }
     }
 }
 

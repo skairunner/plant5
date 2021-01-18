@@ -1,6 +1,6 @@
 use crate::rgg::node::RGGType;
 use crate::rgg::procedures::*;
-use crate::rgg::rule::Condition;
+use crate::rgg::Condition;
 use crate::rgg::{Node, Value};
 use core::fmt::Formatter;
 use serde::de::{Error, Expected, SeqAccess, Unexpected, Visitor};
@@ -128,7 +128,7 @@ impl<'de> Visitor<'de> for ConditionVisitor {
 #[cfg(test)]
 mod test {
     use super::super::procedures::*;
-    use crate::rgg::rule::Condition;
+    use crate::rgg::Condition;
     use crate::rgg::{Node, Value};
 
     #[test]
@@ -225,7 +225,10 @@ replace:
     fn test_de_merge() {
         let proc: Procedure = serde_yaml::from_str("merge: [3, 1, 2, 3]").unwrap();
         match &proc {
-            Procedure::Merge(proc) => {}
+            Procedure::Merge(proc) => {
+                assert_eq!(proc.final_node, 3);
+                assert_eq!(proc.targets, vec![1,2,3]);
+            }
             _ => panic!(),
         }
     }
@@ -242,5 +245,20 @@ replace:
 - [range, 0, 2]"#,
         )
         .unwrap();
+        assert_eq!(conditions[0], Condition::Equals(Value::new_int(3)));
+        assert_eq!(conditions[1], Condition::LessThan(Value::new_float(2.0)));
+        assert_eq!(conditions[2], Condition::GreaterThan(Value::new_float(3.0)));
+        assert_eq!(
+            conditions[3],
+            Condition::LessThanOrEquals(Value::new_int(10))
+        );
+        assert_eq!(
+            conditions[4],
+            Condition::GreaterThanOrEquals(Value::new_int(-3))
+        );
+        assert_eq!(
+            conditions[5],
+            Condition::Range(Value::new_int(0), Value::new_int(2))
+        );
     }
 }
