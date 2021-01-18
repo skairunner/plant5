@@ -59,8 +59,8 @@ impl DirtyGraph {
     pub fn advance_generation(&mut self) {
         self.next_generation += 1;
         if self.next_generation == 255 {
-            self.node_generation.values_mut().for_each(|mut v| *v = 0);
-            self.edge_generation.values_mut().for_each(|mut v| *v = 0);
+            self.node_generation.values_mut().for_each(|v| *v = 0);
+            self.edge_generation.values_mut().for_each(|v| *v = 0);
             self.next_generation = 1;
         }
     }

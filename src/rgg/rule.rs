@@ -1,6 +1,7 @@
 use crate::rgg::procedures::Procedure;
 use crate::rgg::{Node, Value};
 use gamma::graph::{AppendableGraph, DefaultGraph};
+use serde::Deserialize;
 use std::collections::HashMap;
 
 pub trait HasId {

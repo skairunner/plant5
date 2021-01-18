@@ -37,7 +37,7 @@ pub struct AddProcedure {
     pub new_node: Node,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct MergeProcedure {
     /// All the nodes to merge
     pub targets: Vec<i32>,
