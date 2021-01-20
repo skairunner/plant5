@@ -198,4 +198,14 @@ mod tests {
         assert_eq!(graph.graph.order(), 2, "Contents {:?}", graph.graph);
         assert_eq!(graph.values.len(), 2, "Contents {:?}", graph.values);
     }
+
+    #[test]
+    fn test_dont_touch_dirty() {
+        let proc = Procedure::Delete(DeleteProcedure { target: 0 });
+        let mut graph = RggGraph::new();
+        graph.insert_node();
+        let mut mapping = maplit::hashmap! { 0 => 0 };
+        proc.apply(&mut graph, &mut mapping);
+        assert_eq!(graph.graph.order(), 1, "Contents {:?}", graph.graph);
+    }
 }

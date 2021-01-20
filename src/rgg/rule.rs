@@ -66,6 +66,7 @@ impl NodeSet {
 }
 
 /// Describes a replacement rule.
+#[derive(Deserialize)]
 pub struct Rule {
     pub from: NodeSet,
     pub to: Vec<Procedure>,
