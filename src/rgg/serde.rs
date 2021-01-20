@@ -128,6 +128,7 @@ impl<'de> Visitor<'de> for ConditionVisitor {
 #[cfg(test)]
 mod test {
     use super::super::procedures::*;
+    use crate::rgg::rule::FromNode;
     use crate::rgg::Condition;
     use crate::rgg::{Node, Value};
 
@@ -227,7 +228,7 @@ replace:
         match &proc {
             Procedure::Merge(proc) => {
                 assert_eq!(proc.final_node, 3);
-                assert_eq!(proc.targets, vec![1,2,3]);
+                assert_eq!(proc.targets, vec![1, 2, 3]);
             }
             _ => panic!(),
         }
@@ -259,6 +260,31 @@ replace:
         assert_eq!(
             conditions[5],
             Condition::Range(Value::new_int(0), Value::new_int(2))
+        );
+    }
+
+    #[test]
+    fn test_de_fromnode() {
+        let node: FromNode = serde_yaml::from_str("id: 3").unwrap();
+        assert_eq!(node.id, 3);
+        assert_eq!(node.name, None);
+        assert!(node.values.is_empty());
+
+        let node: FromNode = serde_yaml::from_str(
+            r#"
+id: 9
+name: Test Case
+values:
+    length: [lt, 3]
+        "#,
+        )
+        .unwrap();
+        assert_eq!(node.id, 9);
+        assert_eq!(node.name, Some("Test Case".to_string()));
+        assert_eq!(node.values.len(), 1);
+        assert_eq!(
+            node.values["length"],
+            Condition::LessThan(Value::new_int(3))
         );
     }
 }

@@ -9,11 +9,14 @@ pub trait HasId {
 }
 
 /// Identify a node to match against
+#[derive(Deserialize)]
 pub struct FromNode {
     /// Identify the node in the context of a rule
     pub id: i32,
     /// Identify the "name" of the node. Optional.
+    #[serde(default)]
     pub name: Option<String>,
+    #[serde(default)]
     /// Specify any potential values the node has.
     pub values: HashMap<String, Condition>,
 }
@@ -36,6 +39,7 @@ impl FromNode {
 }
 
 /// A defined node in a ruleset. Has an optional name, and may have edge connections.
+#[derive(Deserialize)]
 pub struct NodeSet {
     pub nodes: Vec<FromNode>,
     pub edges: Vec<(i32, i32)>,
