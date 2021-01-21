@@ -25,7 +25,7 @@ pub struct DeleteProcedure {
 #[derive(Deserialize, Debug)]
 pub struct ReplaceProcedure {
     pub target: i32,
-    #[serde(rename = "replace")]
+    #[serde(rename = "with")]
     pub replacement: Node,
 }
 

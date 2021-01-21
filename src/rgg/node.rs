@@ -7,6 +7,7 @@ use std::fmt::{Debug, Formatter};
 /// Represents the values stored in a node in an RGG.
 pub struct Node {
     pub name: String,
+    #[serde(default)]
     pub values: HashMap<String, Value>,
 }
 

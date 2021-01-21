@@ -42,6 +42,7 @@ impl FromNode {
 #[derive(Deserialize)]
 pub struct NodeSet {
     pub nodes: Vec<FromNode>,
+    #[serde(default)]
     pub edges: Vec<(i32, i32)>,
 }
 

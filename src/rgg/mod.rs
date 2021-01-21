@@ -7,8 +7,9 @@ pub mod matcher;
 pub mod node;
 mod procedures;
 mod rgg_graph;
-mod rule;
+pub mod rule;
 mod serde;
 
 pub use condition::Condition;
 pub use node::{Node, Value};
+pub use rule::{FromNode, NodeSet, Rule};
