@@ -52,41 +52,55 @@ enum CheckDirty {
 }
 
 impl Procedure {
-    /// Return Some(node id) if the node is dirty, otherwise return None.
-    fn get_if_not_dirty(
-        target: i32,
-        graph: &RggGraph,
-        mapping: &HashMap<i32, usize>,
-    ) -> CheckDirty {
-        match mapping.get(&target) {
-            None => CheckDirty::DoesNotExist,
-            Some(target) => match graph.graph.node_is_dirty(*target) {
-                true => CheckDirty::Dirty,
-                false => CheckDirty::Clean(*target),
-            },
+    /// Check whether all targets specified exist in the mapping.
+    pub fn targets_exist(&self, mapping: &HashMap<i32, usize>) -> bool {
+        match self {
+            Procedure::Delete(proc) => {
+                mapping.contains_key(&proc.target)
+            }
+            Procedure::Replace(proc) => {
+                mapping.contains_key(&proc.target)
+            }
+            Procedure::Add(proc) => {
+                for neighbor in &proc.neighbors {
+                    if !mapping.contains_key(neighbor) {
+                        return false;
+                    }
+                }
+                true
+            }
+            Procedure::Merge(proc) => {
+                for target in &proc.targets {
+                    if !mapping.contains_key(target) {
+                        return false;
+                    }
+                }
+                true
+            }
         }
     }
 
     /// Apply the contents of the Procedure to a mapped graph.
-    pub fn apply(&self, graph: &mut RggGraph, mapping: &mut HashMap<i32, usize>) {
+    /// Returns false on failure to execute.
+    pub fn apply(&self, graph: &mut RggGraph, mapping: &mut HashMap<i32, usize>) -> bool {
         match self {
-            Procedure::Delete(proc) => match Self::get_if_not_dirty(proc.target, graph, mapping) {
-                CheckDirty::Dirty => {}
-                CheckDirty::DoesNotExist => {
-                    log::warn!("Tried to delete a node that was already deleted")
-                }
-                CheckDirty::Clean(target) => {
-                    graph.remove_node(target);
+            Procedure::Delete(proc) => match mapping.get(&proc.target) {
+                Some(target) => {
+                    graph.remove_node(*target);
                     mapping.remove(&proc.target);
                 }
-            },
-            Procedure::Replace(proc) => match Self::get_if_not_dirty(proc.target, graph, mapping) {
-                CheckDirty::Dirty => {}
-                CheckDirty::DoesNotExist => {
-                    log::warn!("Tried to replace a node that does not exist")
+                None => {
+                    log::error!("Could not delete node {}", proc.target);
+                    return false;
                 }
-                CheckDirty::Clean(target) => {
-                    graph.values.insert(target, proc.replacement.clone());
+            },
+            Procedure::Replace(proc) => match mapping.get(&proc.target) {
+                Some(target) => {
+                    graph.values.insert(*target, proc.replacement.clone());
+                }
+                None => {
+                    log::error!("Could not replace node {}", proc.target);
+                    return false;
                 }
             },
             Procedure::Add(proc) => {
@@ -96,37 +110,39 @@ impl Procedure {
                         Some(neighbor) => {
                             graph.graph.add_edge(node_id, *neighbor).unwrap();
                         }
-                        None => log::warn!(
-                            "Could not find specified neighbor {} in mapping {:?}",
-                            neighbor,
-                            mapping
-                        ),
+                        None => {
+                            log::warn!(
+                                "Could not find specified neighbor {} in mapping {:?}",
+                                neighbor,
+                                mapping
+                            );
+                            return false;
+                        }
                     }
                 }
             }
             Procedure::Merge(proc) => {
                 // Make a list of all edges that connect to all neighbors
                 let mut neighbors: HashSet<usize> = HashSet::new();
-                // Ensure that all nodes to be merged are not dirty.
+                // Ensure that all nodes to be merged exist
                 for rule_id in &proc.targets {
-                    match Self::get_if_not_dirty(*rule_id, graph, mapping) {
-                        CheckDirty::Dirty => return,
-                        CheckDirty::DoesNotExist => {
-                            log::warn!("Tried to merge a node that does not exist");
-                            return;
-                        }
-                        CheckDirty::Clean(id) => {
+                    match mapping.get(rule_id) {
+                        Some(id) => {
                             graph
                                 .graph
-                                .neighbors(id)
+                                .neighbors(*id)
                                 .expect("Could not unwrap neighbors()")
                                 .for_each(|n| {
                                     neighbors.insert(*n);
                                 });
                         }
+                        None => {
+                            log::error!("Could not merge because missing mapping for node {}", rule_id);
+                            return false;
+                        }
                     }
                 }
-                // Remove all affected nodes, then re-add all the required edges
+                // Remove all affected nodes, then re-add all the required edges.
                 for rule_id in &proc.targets {
                     if *rule_id != proc.final_node {
                         let node_id = mapping[&rule_id];
@@ -138,7 +154,8 @@ impl Procedure {
                     graph.graph.add_edge(node_id, neighbor).unwrap();
                 }
             }
-        };
+        }
+        false
     }
 }
 

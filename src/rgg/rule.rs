@@ -3,6 +3,7 @@ use crate::rgg::{Condition, Node, Value};
 use gamma::graph::{AppendableGraph, DefaultGraph};
 use serde::Deserialize;
 use std::collections::HashMap;
+use crate::rgg::rgg_graph::RggGraph;
 
 pub trait HasId {
     fn get_id(&self) -> i32;
@@ -71,4 +72,34 @@ impl NodeSet {
 pub struct Rule {
     pub from: NodeSet,
     pub to: Vec<Procedure>,
+}
+
+impl Rule {
+    /// Find all match and apply the rule to each match.
+    /// If a node or edge disappears during applying a rule, it is skipped.
+    pub fn apply(&self, graph: &mut RggGraph) {
+        let matches = self.matches(graph).collect::<Vec<_>>();
+        for mut mapping in matches {
+            if self.check_procedure_targets_exist(&mapping) {
+                for procedure in &self.to {
+                    let result = procedure.apply(graph, &mut mapping);
+                    if !result {
+                        continue;
+                    }
+                }
+            } else {
+                log::info!("Some targets for Rule apply did not exist and were skipped.");
+            }
+        }
+    }
+
+    /// Check that all procedure targets exist before attempting to run any procedure.
+    fn check_procedure_targets_exist(&self, mapping: &HashMap<i32, usize>) -> bool {
+        for proc in &self.to {
+            if !proc.targets_exist(mapping) {
+                return false;
+            }
+        }
+        true
+    }
 }
