@@ -6,10 +6,11 @@ mod dirty_graph;
 pub mod matcher;
 pub mod node;
 mod procedures;
-mod rgg_graph;
+pub mod rgg_graph;
 pub mod rule;
 mod serde;
 
 pub use condition::Condition;
 pub use node::{Node, Value};
+pub use rgg_graph::RggGraph;
 pub use rule::{FromNode, NodeSet, Rule};

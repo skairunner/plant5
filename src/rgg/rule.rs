@@ -1,9 +1,9 @@
 use crate::rgg::procedures::Procedure;
+use crate::rgg::rgg_graph::RggGraph;
 use crate::rgg::{Condition, Node, Value};
 use gamma::graph::{AppendableGraph, DefaultGraph};
 use serde::Deserialize;
 use std::collections::HashMap;
-use crate::rgg::rgg_graph::RggGraph;
 
 pub trait HasId {
     fn get_id(&self) -> i32;

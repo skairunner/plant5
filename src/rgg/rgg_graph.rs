@@ -3,6 +3,7 @@ use crate::rgg::Node;
 use gamma::graph::{AppendableGraph, RemovableGraph};
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct RggGraph {
     pub graph: DirtyGraph,
     pub values: HashMap<usize, super::Node>,

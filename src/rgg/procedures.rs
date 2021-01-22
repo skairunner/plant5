@@ -55,12 +55,8 @@ impl Procedure {
     /// Check whether all targets specified exist in the mapping.
     pub fn targets_exist(&self, mapping: &HashMap<i32, usize>) -> bool {
         match self {
-            Procedure::Delete(proc) => {
-                mapping.contains_key(&proc.target)
-            }
-            Procedure::Replace(proc) => {
-                mapping.contains_key(&proc.target)
-            }
+            Procedure::Delete(proc) => mapping.contains_key(&proc.target),
+            Procedure::Replace(proc) => mapping.contains_key(&proc.target),
             Procedure::Add(proc) => {
                 for neighbor in &proc.neighbors {
                     if !mapping.contains_key(neighbor) {
@@ -137,7 +133,10 @@ impl Procedure {
                                 });
                         }
                         None => {
-                            log::error!("Could not merge because missing mapping for node {}", rule_id);
+                            log::error!(
+                                "Could not merge because missing mapping for node {}",
+                                rule_id
+                            );
                             return false;
                         }
                     }
