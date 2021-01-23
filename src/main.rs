@@ -1,7 +1,9 @@
 mod rgg;
+mod logger;
 
 use crate::rgg::{RggGraph, Rule};
 use bevy::prelude::*;
+use crate::logger::start_logger;
 
 struct Plant {
     pub rules: Vec<Rule>,
@@ -9,8 +11,7 @@ struct Plant {
 }
 
 fn main() {
-    use simplelog::*;
-    TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).unwrap();
+    start_logger();
     let rules: Vec<Rule> = serde_yaml::from_str(
         r#"
 - from:
@@ -37,7 +38,7 @@ fn main() {
         values: Default::default(),
     });
     plant.rules[0].apply(&mut plant.graph);
-    // plant.rules[0].apply(&mut plant.graph);
-    println!("{:?}", plant.graph);
+    plant.rules[0].apply(&mut plant.graph);
+    log::error!("{:?}", plant.graph);
     App::build().add_plugins(DefaultPlugins).run();
 }
