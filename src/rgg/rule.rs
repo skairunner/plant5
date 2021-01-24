@@ -1,6 +1,6 @@
-use crate::rgg::procedures::Procedure;
+use crate::rgg::procedures::{ApplyResult, Procedure};
 use crate::rgg::rgg_graph::RggGraph;
-use crate::rgg::{Condition, Node, Value};
+use crate::rgg::{Condition, Node};
 use gamma::graph::{AppendableGraph, DefaultGraph};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -74,23 +74,49 @@ pub struct Rule {
     pub to: Vec<Procedure>,
 }
 
+/// Tracks the results of executing the entire rule
+pub struct RuleResult {
+    pub removed: Vec<usize>,
+    pub added: Vec<usize>,
+    pub modified: Vec<usize>,
+}
+
+impl RuleResult {
+    pub fn new() -> Self {
+        Self {
+            removed: Vec::new(),
+            added: Vec::new(),
+            modified: Vec::new(),
+        }
+    }
+    pub fn add(&mut self, apply: ApplyResult) {
+        match apply {
+            ApplyResult::Removed(r) => self.removed.extend(r),
+            ApplyResult::Added(a) => self.added.push(a),
+            ApplyResult::Modified(m) => self.modified.push(m),
+            _ => {}
+        }
+    }
+}
+
 impl Rule {
     /// Find all match and apply the rule to each match.
     /// If a node or edge disappears during applying a rule, it is skipped.
-    pub fn apply(&self, graph: &mut RggGraph) {
+    pub fn apply(&self, graph: &mut RggGraph) -> RuleResult {
         let matches = self.matches(graph).collect::<Vec<_>>();
+        let mut result = RuleResult::new();
         for mut mapping in matches {
             if self.check_procedure_targets_exist(&mapping) {
                 for procedure in &self.to {
-                    let result = procedure.apply(graph, &mut mapping);
-                    if !result {
-                        continue;
-                    }
+                    let apply_result = procedure.apply(graph, &mut mapping);
+                    result.add(apply_result);
                 }
             } else {
                 log::info!("Some targets for Rule apply did not exist and were skipped.");
             }
         }
+
+        result
     }
 
     /// Check that all procedure targets exist before attempting to run any procedure.

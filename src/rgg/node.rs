@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
 
 #[derive(Clone, Debug, Deserialize)]

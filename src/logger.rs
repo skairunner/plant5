@@ -1,4 +1,4 @@
-use simplelog::{ConfigBuilder, TermLogger, LevelFilter, TerminalMode, Config};
+use simplelog::{ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
 
 pub fn start_logger() {
     let config = ConfigBuilder::new()

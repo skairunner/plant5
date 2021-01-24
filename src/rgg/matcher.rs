@@ -142,6 +142,7 @@ impl Iterator for MatchingState<'_> {
     type Item = HashMap<i32, usize>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        #[allow(unused_assignments)]
         let mut output = HashMap::new();
         loop {
             let result = self.continue_search(self.rule, self.graph);

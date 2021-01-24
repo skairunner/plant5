@@ -1,13 +1,19 @@
-mod rgg;
 mod logger;
+mod rgg;
 
+use crate::logger::start_logger;
 use crate::rgg::{RggGraph, Rule};
 use bevy::prelude::*;
-use crate::logger::start_logger;
 
+/// The container for all the actual entities that form a plant.
 struct Plant {
     pub rules: Vec<Rule>,
     pub graph: RggGraph,
+}
+
+/// Represents the corresponding visual part of a plant.
+struct PlantNode {
+    pub node_id: usize,
 }
 
 fn main() {

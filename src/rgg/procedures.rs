@@ -3,7 +3,7 @@ use crate::rgg::Node;
 
 use std::collections::{HashMap, HashSet};
 
-use gamma::graph::{AppendableGraph, Graph, RemovableGraph};
+use gamma::graph::{AppendableGraph, Graph};
 use serde::Deserialize;
 
 /// Rules to follow to go from LHS to RHS
@@ -51,6 +51,15 @@ enum CheckDirty {
     Dirty,
 }
 
+/// Tracks the results of a procedure application. Useful for rendering.
+pub enum ApplyResult {
+    Removed(Vec<usize>),
+    Added(usize),
+    Modified(usize),
+    None,
+    Failed,
+}
+
 impl Procedure {
     /// Check whether all targets specified exist in the mapping.
     pub fn targets_exist(&self, mapping: &HashMap<i32, usize>) -> bool {
@@ -78,25 +87,27 @@ impl Procedure {
 
     /// Apply the contents of the Procedure to a mapped graph.
     /// Returns false on failure to execute.
-    pub fn apply(&self, graph: &mut RggGraph, mapping: &mut HashMap<i32, usize>) -> bool {
+    pub fn apply(&self, graph: &mut RggGraph, mapping: &mut HashMap<i32, usize>) -> ApplyResult {
         match self {
-            Procedure::Delete(proc) => match mapping.get(&proc.target) {
+            Procedure::Delete(proc) => match mapping.get(&proc.target).map(|n| *n) {
                 Some(target) => {
-                    graph.remove_node(*target);
+                    graph.remove_node(target);
                     mapping.remove(&proc.target);
+                    ApplyResult::Removed(vec![target])
                 }
                 None => {
                     log::error!("Could not delete node {}", proc.target);
-                    return false;
+                    ApplyResult::Failed
                 }
             },
             Procedure::Replace(proc) => match mapping.get(&proc.target) {
                 Some(target) => {
                     graph.values.insert(*target, proc.replacement.clone());
+                    ApplyResult::None
                 }
                 None => {
                     log::error!("Could not replace node {}", proc.target);
-                    return false;
+                    ApplyResult::Failed
                 }
             },
             Procedure::Add(proc) => {
@@ -112,10 +123,11 @@ impl Procedure {
                                 neighbor,
                                 mapping
                             );
-                            return false;
+                            return ApplyResult::Failed;
                         }
                     }
                 }
+                ApplyResult::Added(node_id)
             }
             Procedure::Merge(proc) => {
                 // Make a list of all edges that connect to all neighbors
@@ -137,24 +149,27 @@ impl Procedure {
                                 "Could not merge because missing mapping for node {}",
                                 rule_id
                             );
-                            return false;
+                            return ApplyResult::Failed;
                         }
                     }
                 }
                 // Remove all affected nodes, then re-add all the required edges.
+                let mut removed = Vec::new();
                 for rule_id in &proc.targets {
                     if *rule_id != proc.final_node {
                         let node_id = mapping[&rule_id];
                         graph.remove_node(node_id);
+                        removed.push(node_id);
                     }
                 }
                 let node_id = mapping[&proc.final_node];
                 for neighbor in neighbors {
                     graph.graph.add_edge(node_id, neighbor).unwrap();
                 }
+
+                ApplyResult::Removed(removed)
             }
         }
-        false
     }
 }
 
