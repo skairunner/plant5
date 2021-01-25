@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize)]
 /// Represents the values stored in a node in an RGG.
@@ -34,7 +35,7 @@ pub enum RGGType {
 
 #[derive(Clone)]
 pub struct Value {
-    pub(super) raw_value: *mut i32,
+    pub(super) raw_value: i32,
     pub(super) rgg_type: RGGType,
 }
 
@@ -42,17 +43,9 @@ impl Debug for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         unsafe {
             f.debug_struct("Value")
-                .field("raw_value", &*self.raw_value)
-                .field("rgg_Type", &self.rgg_type)
+                .field("raw_value", &self.raw_value)
+                .field("rgg_type", &self.rgg_type)
                 .finish()
-        }
-    }
-}
-
-impl Drop for Value {
-    fn drop(&mut self) {
-        unsafe {
-            self.raw_value.drop_in_place();
         }
     }
 }
@@ -64,22 +57,22 @@ impl Value {
             RGGType::Float => Box::into_raw(Box::new(0f32)) as *mut i32,
         };
         Self {
-            raw_value: pointer,
+            raw_value: unsafe { *pointer },
             rgg_type: value_type,
         }
     }
 
     pub fn new_int(i: i32) -> Self {
         Self {
-            raw_value: Box::into_raw(Box::new(i)),
+            raw_value: i,
             rgg_type: RGGType::Int,
         }
     }
 
     pub fn new_float(f: f32) -> Self {
-        let p = Box::into_raw(Box::new(f));
+        let p = Box::into_raw(Box::new(f)) as *mut i32;
         Self {
-            raw_value: p as *mut i32,
+            raw_value: unsafe { *p },
             rgg_type: RGGType::Float,
         }
     }
@@ -93,23 +86,22 @@ impl Value {
     }
 
     pub fn set_f32(&mut self, mut v: f32) {
+        let p = Box::into_raw(Box::new(v)) as *mut i32;
         unsafe {
-            self.raw_value.drop_in_place();
-            self.raw_value = &mut v as *mut f32 as *mut i32;
+            self.raw_value = *p;
         }
     }
 
-    pub fn set_i32(&mut self, mut v: i32) {
+    pub fn set_i32(&mut self, v: i32) {
         unsafe {
-            self.raw_value.drop_in_place();
-            self.raw_value = &mut v as *mut i32;
+            self.raw_value = v;
         }
     }
 }
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        unsafe { self.rgg_type == other.rgg_type && *self.raw_value == *other.raw_value }
+        self.rgg_type == other.rgg_type && self.raw_value == other.raw_value
     }
 }
 

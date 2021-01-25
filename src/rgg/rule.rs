@@ -89,13 +89,19 @@ impl RuleResult {
             modified: Vec::new(),
         }
     }
-    pub fn add(&mut self, apply: ApplyResult) {
+    pub fn add_apply_result(&mut self, apply: ApplyResult) {
         match apply {
             ApplyResult::Removed(r) => self.removed.extend(r),
             ApplyResult::Added(a) => self.added.push(a),
             ApplyResult::Modified(m) => self.modified.push(m),
             _ => {}
         }
+    }
+
+    pub fn add(&mut self, mut result: Self) {
+        self.removed.extend(result.removed);
+        self.added.extend(result.added);
+        self.modified.extend(result.modified);
     }
 }
 
@@ -109,7 +115,7 @@ impl Rule {
             if self.check_procedure_targets_exist(&mapping) {
                 for procedure in &self.to {
                     let apply_result = procedure.apply(graph, &mut mapping);
-                    result.add(apply_result);
+                    result.add_apply_result(apply_result);
                 }
             } else {
                 log::info!("Some targets for Rule apply did not exist and were skipped.");
