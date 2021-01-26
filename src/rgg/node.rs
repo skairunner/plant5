@@ -78,7 +78,7 @@ impl Value {
     }
 
     pub fn get<T: Copy>(&self) -> T {
-        unsafe { *(self.raw_value as *mut T) }
+        unsafe { *(&self.raw_value as *const i32 as *const T) }
     }
 
     pub fn get_mut<T: Copy>(&mut self) -> &mut T {

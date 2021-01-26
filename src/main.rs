@@ -1,11 +1,13 @@
 mod logger;
 mod panorbit;
 mod rgg;
+mod shapes;
 
 use crate::logger::start_logger;
 use crate::panorbit::{pan_orbit_camera, spawn_camera};
 use crate::rgg::rule::RuleResult;
 use crate::rgg::{RggGraph, Rule};
+use crate::shapes::{get_mesh, stalk};
 use bevy::ecs::bevy_utils::HashMap;
 use bevy::prelude::*;
 use bevy::utils::AHashExt;
@@ -25,6 +27,8 @@ fn get_test_rules() -> Vec<Rule> {
         target: 0
         with:
           name: "stem"
+          values:
+            len: 1.0
     - add:
         neighbors: [0]
         node:
@@ -34,8 +38,9 @@ fn get_test_rules() -> Vec<Rule> {
     .unwrap()
 }
 
-fn get_test_plant() -> Plant {
+fn get_test_plant(id: usize) -> Plant {
     let mut plant = Plant {
+        id,
         rules: get_test_rules(),
         graph: RggGraph::new(),
     };
@@ -48,6 +53,7 @@ fn get_test_plant() -> Plant {
 
 /// The container for all the actual entities that form a plant.
 struct Plant {
+    pub id: usize,
     pub rules: Vec<Rule>,
     pub graph: RggGraph,
 }
@@ -65,23 +71,10 @@ impl Plant {
 
 /// Represents the corresponding visual part of a plant.
 struct PlantNode {
+    pub plant_id: usize,
     pub node_id: usize,
     /// The coordinate to attach any children of this plant node
     pub node_offset: Vec3,
-}
-
-fn generate_stalk_mesh(width: f32, length: f32) -> Mesh {
-    use bevy::render::mesh::shape::*;
-
-    Box {
-        min_x: -width / 2.0,
-        max_x: width / 2.0,
-        min_y: -width / 2.0,
-        max_y: width / 2.0,
-        min_z: 0.0,
-        max_z: length,
-    }
-    .into()
 }
 
 fn update_plants(
@@ -90,55 +83,65 @@ fn update_plants(
     mut materials: ResMut<Assets<StandardMaterial>>,
     tick: Res<Tick>,
     mut plant_query: Query<(&mut Plant,)>,
-    node_query: Query<(&PlantNode, Entity)>,
+    node_query: Query<(&PlantNode, Entity, &Handle<Mesh>)>,
 ) {
     let mut transforms = HashMap::new();
     let mut offsets = HashMap::new();
-    for (node, entity) in node_query.iter() {
-        transforms.insert(node.node_id, entity);
-        offsets.insert(node.node_id, node.node_offset);
+    let mut mesh_handles = HashMap::new();
+    for (node, entity, mesh) in node_query.iter() {
+        transforms.insert((node.plant_id, node.node_id), entity);
+        offsets.insert((node.plant_id, node.node_id), node.node_offset);
+        mesh_handles.insert((node.plant_id, node.node_id), mesh.clone());
     }
 
     for (mut plant,) in plant_query.iter_mut() {
-        let mut added_nodes = HashSet::new();
-        if tick.0 > 3 && plant.graph.graph.order() < 3 {
+        if tick.0 > 3 && plant.graph.order() < 3 {
             let results = plant.do_rules();
-            added_nodes.extend(results.added.into_iter());
-        }
-        for id in added_nodes {
-            let mesh = generate_stalk_mesh(0.1, 4.0);
-            let mesh = meshes.add(mesh);
-            let material = materials.add(StandardMaterial {
-                albedo: Color::rgb(0.5, 0.5, 0.5),
-                ..Default::default()
-            });
-            let parent_node = *plant.graph.graph.neighbors(id).unwrap().next().unwrap();
-            let offset = offsets.get(&parent_node).map(|v| *v).unwrap_or_else(|| {
-                log::error!("Could not find PlantNode with id {}", parent_node);
-                Vec3::default()
-            });
-            let parent = transforms.get(&parent_node).map(|e| *e).expect(&format!(
-                "An entity corresponding to the node id {}",
-                parent_node
-            ));
-            commands.set_current_entity(parent);
-            commands.with_children(|p| {
-                log::info!("{} was added", id);
-                p.spawn((PlantNode {
-                    node_id: id,
-                    node_offset: Vec3::new(0.0, 0.0, 4.0),
-                },))
-                    .with_bundle(PbrBundle {
-                        mesh,
-                        material,
-                        transform: Transform {
-                            translation: offset,
-                            rotation: Quat::from_rotation_y(0.52),
-                            ..Default::default()
-                        },
-                        ..Default::default()
+            for id in results.added {
+                let mesh = get_mesh(&plant.graph.values[&id]);
+                let mesh = meshes.add(mesh);
+                let material = materials.add(StandardMaterial {
+                    albedo: Color::rgb(0.5, 0.5, 0.5),
+                    ..Default::default()
+                });
+                let parent_node = *plant.graph.neighbors(id).unwrap().next().unwrap();
+                let offset = offsets
+                    .get(&(plant.id, parent_node))
+                    .map(|v| *v)
+                    .unwrap_or_else(|| {
+                        log::error!("Could not find PlantNode with id {}", parent_node);
+                        Vec3::default()
                     });
-            });
+                let parent = transforms
+                    .get(&(plant.id, parent_node))
+                    .map(|e| *e)
+                    .expect(&format!(
+                        "An entity corresponding to the node id {}",
+                        parent_node
+                    ));
+                commands.set_current_entity(parent);
+                commands.with_children(|p| {
+                    p.spawn((PlantNode {
+                        plant_id: plant.id,
+                        node_id: id,
+                        node_offset: Vec3::new(0.0, 0.0, 4.0),
+                    },))
+                        .with_bundle(PbrBundle {
+                            mesh,
+                            material,
+                            transform: Transform {
+                                translation: offset,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        });
+                });
+            }
+            for id in results.modified {
+                let handle = &mesh_handles[&(plant.id, id)];
+                let node = &plant.graph.values[&id];
+                meshes.set(handle, get_mesh(node));
+            }
         }
     }
 }
@@ -148,12 +151,13 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = generate_stalk_mesh(0.1, 4.0);
+    let mesh = stalk(0.1, 4.0);
     let mesh = meshes.add(mesh);
     let material = materials.add(StandardMaterial::default());
     commands
-        .spawn((get_test_plant(),))
+        .spawn((get_test_plant(0),))
         .spawn((PlantNode {
+            plant_id: 0,
             node_id: 0,
             node_offset: Vec3::new(0.0, 0.0, 4.0),
         },))

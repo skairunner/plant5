@@ -103,7 +103,7 @@ impl Procedure {
             Procedure::Replace(proc) => match mapping.get(&proc.target) {
                 Some(target) => {
                     graph.values.insert(*target, proc.replacement.clone());
-                    ApplyResult::None
+                    ApplyResult::Modified(*target)
                 }
                 None => {
                     log::error!("Could not replace node {}", proc.target);

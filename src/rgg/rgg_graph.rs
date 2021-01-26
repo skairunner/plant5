@@ -1,6 +1,6 @@
 use crate::rgg::dirty_graph::DirtyGraph;
 use crate::rgg::Node;
-use gamma::graph::{AppendableGraph, RemovableGraph};
+use gamma::graph::{AppendableGraph, Graph, RemovableGraph};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -32,5 +32,16 @@ impl RggGraph {
     pub fn remove_node(&mut self, id: usize) {
         self.graph.remove_node(id);
         self.values.remove_entry(&id);
+    }
+
+    pub fn order(&self) -> usize {
+        self.graph.order()
+    }
+
+    pub fn neighbors<'a>(
+        &'a self,
+        id: usize,
+    ) -> Result<Box<dyn Iterator<Item = &'a usize> + 'a>, gamma::graph::Error> {
+        self.graph.neighbors(id)
     }
 }
