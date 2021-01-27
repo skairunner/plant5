@@ -43,7 +43,7 @@ impl<'a> MatchingState<'a> {
             mapping: HashMap::new(),
             pattern_index: 0,
             progress: maplit::hashmap! { 0 => 0 },
-            graph_nodes: graph.graph.nodes().map(|e| *e).collect(),
+            graph_nodes: graph.graph.nodes().copied().collect(),
         }
     }
 

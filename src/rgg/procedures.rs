@@ -89,7 +89,7 @@ impl Procedure {
     /// Returns false on failure to execute.
     pub fn apply(&self, graph: &mut RggGraph, mapping: &mut HashMap<i32, usize>) -> ApplyResult {
         match self {
-            Procedure::Delete(proc) => match mapping.get(&proc.target).map(|n| *n) {
+            Procedure::Delete(proc) => match mapping.get(&proc.target).copied() {
                 Some(target) => {
                     graph.remove_node(target);
                     mapping.remove(&proc.target);
@@ -112,9 +112,14 @@ impl Procedure {
             },
             Procedure::Add(proc) => {
                 let node_id = graph.insert_node_with(proc.new_node.clone());
+                let mut ancestored = false;
                 for neighbor in &proc.neighbors {
                     match mapping.get(&neighbor) {
                         Some(neighbor) => {
+                            if !ancestored {
+                                graph.graph.add_ancestor(node_id, *neighbor);
+                                ancestored = true;
+                            }
                             graph.graph.add_edge(node_id, *neighbor).unwrap();
                         }
                         None => {
@@ -132,10 +137,14 @@ impl Procedure {
             Procedure::Merge(proc) => {
                 // Make a list of all edges that connect to all neighbors
                 let mut neighbors: HashSet<usize> = HashSet::new();
+                let mut ancestor = None;
                 // Ensure that all nodes to be merged exist
                 for rule_id in &proc.targets {
                     match mapping.get(rule_id) {
                         Some(id) => {
+                            if ancestor == None && graph.graph.get_ancestor(*id).is_some() {
+                                ancestor = graph.graph.get_ancestor(*id);
+                            }
                             graph
                                 .graph
                                 .neighbors(*id)
@@ -153,18 +162,22 @@ impl Procedure {
                         }
                     }
                 }
+                let final_node = mapping[&proc.final_node];
                 // Remove all affected nodes, then re-add all the required edges.
                 let mut removed = Vec::new();
                 for rule_id in &proc.targets {
                     if *rule_id != proc.final_node {
                         let node_id = mapping[&rule_id];
+                        graph.graph.remove_children(node_id, Some(final_node));
                         graph.remove_node(node_id);
                         removed.push(node_id);
                     }
                 }
-                let node_id = mapping[&proc.final_node];
                 for neighbor in neighbors {
-                    graph.graph.add_edge(node_id, neighbor).unwrap();
+                    graph.graph.add_edge(final_node, neighbor).unwrap();
+                }
+                if let Some(a) = ancestor {
+                    graph.graph.add_ancestor(final_node, a);
                 }
 
                 ApplyResult::Removed(removed)

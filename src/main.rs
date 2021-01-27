@@ -11,8 +11,6 @@ use crate::shapes::{get_mesh, stalk};
 use bevy::ecs::bevy_utils::HashMap;
 use bevy::prelude::*;
 use bevy::utils::AHashExt;
-use gamma::graph::Graph;
-use std::collections::HashSet;
 
 struct Tick(u64);
 
@@ -84,12 +82,15 @@ fn update_plants(
     tick: Res<Tick>,
     mut plant_query: Query<(&mut Plant,)>,
     node_query: Query<(&PlantNode, Entity, &Handle<Mesh>)>,
+    mut offset_query: Query<(&PlantNode, &mut Transform)>,
 ) {
-    let mut transforms = HashMap::new();
+    let mut entities = HashMap::new();
     let mut offsets = HashMap::new();
     let mut mesh_handles = HashMap::new();
+    // store offsets that need editing
+    let mut edit_offsets = HashMap::new();
     for (node, entity, mesh) in node_query.iter() {
-        transforms.insert((node.plant_id, node.node_id), entity);
+        entities.insert((node.plant_id, node.node_id), entity);
         offsets.insert((node.plant_id, node.node_id), node.node_offset);
         mesh_handles.insert((node.plant_id, node.node_id), mesh.clone());
     }
@@ -97,6 +98,7 @@ fn update_plants(
     for (mut plant,) in plant_query.iter_mut() {
         if tick.0 > 3 && plant.graph.order() < 3 {
             let results = plant.do_rules();
+            // Handle added
             for id in results.added {
                 let mesh = get_mesh(&plant.graph.values[&id]);
                 let mesh = meshes.add(mesh);
@@ -104,44 +106,68 @@ fn update_plants(
                     albedo: Color::rgb(0.5, 0.5, 0.5),
                     ..Default::default()
                 });
-                let parent_node = *plant.graph.neighbors(id).unwrap().next().unwrap();
-                let offset = offsets
-                    .get(&(plant.id, parent_node))
-                    .map(|v| *v)
-                    .unwrap_or_else(|| {
-                        log::error!("Could not find PlantNode with id {}", parent_node);
-                        Vec3::default()
-                    });
-                let parent = transforms
-                    .get(&(plant.id, parent_node))
-                    .map(|e| *e)
-                    .expect(&format!(
-                        "An entity corresponding to the node id {}",
-                        parent_node
-                    ));
-                commands.set_current_entity(parent);
-                commands.with_children(|p| {
-                    p.spawn((PlantNode {
+                let parent_node = plant.graph.graph.get_ancestor(id);
+                let (offset, parent) = if let Some(parent_node) = parent_node {
+                    let offset = offsets
+                        .get(&(plant.id, parent_node))
+                        .copied()
+                        .unwrap_or_else(|| {
+                            log::error!("Could not find PlantNode with id {}", parent_node);
+                            Vec3::default()
+                        });
+                    let parent =
+                        entities
+                            .get(&(plant.id, parent_node))
+                            .copied()
+                            .unwrap_or_else(|| panic!(
+                                "An entity corresponding to the node id {}",
+                                parent_node
+                            ));
+                    (offset, Some(parent))
+                } else {
+                    (Vec3::zero(), None)
+                };
+                let child = commands
+                    .spawn((PlantNode {
                         plant_id: plant.id,
                         node_id: id,
-                        node_offset: Vec3::new(0.0, 0.0, 4.0),
+                        node_offset: Vec3::new(0.0, 0.0, 1.0),
                     },))
-                        .with_bundle(PbrBundle {
-                            mesh,
-                            material,
-                            transform: Transform {
-                                translation: offset,
-                                ..Default::default()
-                            },
+                    .with_bundle(PbrBundle {
+                        mesh,
+                        material,
+                        transform: Transform {
+                            translation: offset,
                             ..Default::default()
-                        });
-                });
+                        },
+                        ..Default::default()
+                    })
+                    .current_entity()
+                    .expect("that we just spawned an entity");
+                if let Some(parent) = parent {
+                    commands.push_children(parent, &[child]);
+                }
             }
+            // Handle modified
             for id in results.modified {
                 let handle = &mesh_handles[&(plant.id, id)];
                 let node = &plant.graph.values[&id];
                 meshes.set(handle, get_mesh(node));
+
+                let offset = offsets[&(plant.id, id)];
+
+                // Also queue offsets for children
+                for child in plant.graph.graph.get_children(id) {
+                    edit_offsets.insert((plant.id, child), offset);
+                }
             }
+        }
+    }
+
+    // Actually do the offsets queued
+    for (node, mut transform) in offset_query.iter_mut() {
+        if let Some(offset) = edit_offsets.get(&(node.plant_id, node.node_id)) {
+            transform.translation = *offset;
         }
     }
 }
@@ -159,7 +185,7 @@ fn setup(
         .spawn((PlantNode {
             plant_id: 0,
             node_id: 0,
-            node_offset: Vec3::new(0.0, 0.0, 4.0),
+            node_offset: Vec3::new(0.0, 0.0, 1.0),
         },))
         .with_bundle(PbrBundle {
             mesh,

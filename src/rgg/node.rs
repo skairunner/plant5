@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize)]
 /// Represents the values stored in a node in an RGG.
@@ -41,12 +40,10 @@ pub struct Value {
 
 impl Debug for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        unsafe {
-            f.debug_struct("Value")
-                .field("raw_value", &self.raw_value)
-                .field("rgg_type", &self.rgg_type)
-                .finish()
-        }
+        f.debug_struct("Value")
+            .field("raw_value", &self.raw_value)
+            .field("rgg_type", &self.rgg_type)
+            .finish()
     }
 }
 
@@ -85,17 +82,15 @@ impl Value {
         unsafe { &mut *(self.raw_value as *mut T) }
     }
 
-    pub fn set_f32(&mut self, mut v: f32) {
-        let p = Box::into_raw(Box::new(v)) as *mut i32;
+    pub fn set_f32(&mut self, v: f32) {
+        let p = Box::into_raw(Box::new(v)) as *const i32;
         unsafe {
             self.raw_value = *p;
         }
     }
 
     pub fn set_i32(&mut self, v: i32) {
-        unsafe {
-            self.raw_value = v;
-        }
+        self.raw_value = v;
     }
 }
 

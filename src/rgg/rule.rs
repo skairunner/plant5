@@ -98,7 +98,7 @@ impl RuleResult {
         }
     }
 
-    pub fn add(&mut self, mut result: Self) {
+    pub fn add(&mut self, result: Self) {
         self.removed.extend(result.removed);
         self.added.extend(result.added);
         self.modified.extend(result.modified);

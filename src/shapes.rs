@@ -21,7 +21,7 @@ pub fn get_mesh(node: &Node) -> Mesh {
         n => {
             log::error!("Could not find mesh for {:?}", n);
             Icosphere {
-                radius: 1.0,
+                radius: 0.2,
                 subdivisions: 2,
             }
             .into()

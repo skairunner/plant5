@@ -25,7 +25,7 @@ impl<'de> Deserialize<'de> for Value {
             Err(_) => {
                 let f = s
                     .parse::<f32>()
-                    .map_err(|e| D::Error::invalid_type(Unexpected::Str(&s), &"float or int"))?;
+                    .map_err(|_| D::Error::invalid_type(Unexpected::Str(&s), &"float or int"))?;
                 Ok(Value::from(f))
             }
         }

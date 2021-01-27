@@ -21,6 +21,11 @@ pub struct DirtyGraph {
     /// Store adjancency details: the value is all adjacent elements to the nodeid that is the key.
     /// Each edge is effectively stored as two adjacencies: one from A->B and one from B->A.
     adjacency: BTreeMap<usize, Vec<usize>>,
+    /// Store the immediate predecessor of a node. Mostly used for rendering
+    /// Entry does not exist if there's no predecessor.
+    ancestors: BTreeMap<usize, usize>,
+    /// Store the immediate children of a node.
+    children: BTreeMap<usize, BTreeSet<usize>>,
     /// Stores the dirty integer assoc with nodes.
     node_generation: BTreeMap<usize, u8>,
     /// Stores the dirty edge assoc with nodes.
@@ -38,6 +43,8 @@ impl DirtyGraph {
             nodes: Default::default(),
             edges: Default::default(),
             adjacency: Default::default(),
+            ancestors: Default::default(),
+            children: Default::default(),
             node_generation: Default::default(),
             edge_generation: Default::default(),
             next_node: 0,
@@ -46,13 +53,55 @@ impl DirtyGraph {
     }
 
     fn add_to_adjacency(&mut self, lhs: usize, rhs: usize) {
-        (*self.adjacency.entry(lhs).or_insert_with(|| vec![])).push(rhs)
+        (*self.adjacency.entry(lhs).or_insert_with(std::vec::Vec::new)).push(rhs)
     }
 
     /// Infallible internal method used to implement has_edge()
     fn contains_edge(&self, sid: usize, tid: usize) -> bool {
         let edge = new_edge(sid, tid);
         self.edges.contains(&edge)
+    }
+
+    /// Add an ancestor.
+    pub fn add_ancestor(&mut self, me: usize, ancestor: usize) {
+        self.ancestors.insert(me, ancestor);
+        let children = self
+            .children
+            .entry(ancestor)
+            .or_insert_with(BTreeSet::default);
+        children.insert(me);
+    }
+
+    /// Remove an ancestor.
+    pub fn remove_ancestor(&mut self, me: usize) {
+        self.ancestors.remove(&me);
+    }
+
+    /// Remove all the children of 'id' and either assign id's parent as the parents (if possible)
+    /// or assign the contents of "remap" as the parent.
+    pub fn remove_children(&mut self, id: usize, remap: Option<usize>) {
+        let ancestor = match remap {
+            Some(remap) => Some(remap),
+            None => self.get_ancestor(id),
+        };
+        for child in self.get_children(id) {
+            match &ancestor {
+                Some(ancestor) => self.add_ancestor(child, *ancestor),
+                None => self.remove_ancestor(child),
+            }
+        }
+        self.children.remove(&id);
+    }
+
+    pub fn get_ancestor(&self, id: usize) -> Option<usize> {
+        self.ancestors.get(&id).copied()
+    }
+
+    pub fn get_children(&self, id: usize) -> Vec<usize> {
+        match self.children.get(&id) {
+            Some(children) => children.iter().copied().collect(),
+            None => vec![],
+        }
     }
 
     /// Increment the generation, resetting if required.
