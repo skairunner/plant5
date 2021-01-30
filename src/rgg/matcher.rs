@@ -173,7 +173,8 @@ impl Iterator for MatchingState<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rgg::rule::{FromNode, NodeSet};
+    use crate::rgg::rule::NodeSet;
+    use crate::rgg::FromNode;
     use gamma::graph::AppendableGraph;
     use ntest::timeout;
 

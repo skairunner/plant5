@@ -127,9 +127,8 @@ impl<'de> Visitor<'de> for ConditionVisitor {
 #[cfg(test)]
 mod test {
     use super::super::procedures::*;
-    use crate::rgg::rule::{FromNode, ToNode};
     use crate::rgg::Condition;
-    use crate::rgg::{Node, Value};
+    use crate::rgg::{FromNode, Node, ToNode, Value};
 
     #[test]
     fn test_de_value_float() {

@@ -12,7 +12,7 @@ mod serde;
 pub mod value;
 
 pub use condition::Condition;
-pub use node::{FromNode, Node};
+pub use node::{FromNode, Node, ToNode};
 pub use rgg_graph::RggGraph;
 pub use rule::{NodeSet, Rule};
 pub use value::Value;
