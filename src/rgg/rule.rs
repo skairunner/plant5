@@ -1,43 +1,8 @@
+use super::{FromNode, RggGraph};
 use crate::rgg::procedures::{ApplyResult, Procedure};
-use crate::rgg::rgg_graph::RggGraph;
-use crate::rgg::{Condition, Node};
 use gamma::graph::{AppendableGraph, DefaultGraph};
 use serde::Deserialize;
 use std::collections::HashMap;
-
-pub trait HasId {
-    fn get_id(&self) -> i32;
-}
-
-/// Identify a node to match against
-#[derive(Deserialize)]
-pub struct FromNode {
-    /// Identify the node in the context of a rule
-    pub id: i32,
-    /// Identify the "name" of the node. Optional.
-    #[serde(default)]
-    pub name: Option<String>,
-    #[serde(default)]
-    /// Specify any potential values the node has.
-    pub values: HashMap<String, Condition>,
-}
-
-impl FromNode {
-    /// Check whether the node can match the provided node.
-    pub fn match_node(&self, node: &Node) -> bool {
-        // If name is specified, needs to match.
-        if let Some(name) = self.name.as_ref() {
-            if *name != node.name {
-                return false;
-            }
-        }
-
-        // If any values are specified, need to match conditions.
-        // TODO
-
-        true
-    }
-}
 
 /// A defined node in a ruleset. Has an optional name, and may have edge connections.
 #[derive(Deserialize)]

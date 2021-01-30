@@ -127,7 +127,7 @@ impl<'de> Visitor<'de> for ConditionVisitor {
 #[cfg(test)]
 mod test {
     use super::super::procedures::*;
-    use crate::rgg::rule::FromNode;
+    use crate::rgg::rule::{FromNode, ToNode};
     use crate::rgg::Condition;
     use crate::rgg::{Node, Value};
 
@@ -285,5 +285,19 @@ values:
             node.values["length"],
             Condition::LessThan(Value::new_int(3))
         );
+    }
+
+    #[test]
+    fn test_de_tonode() {
+        let node: ToNode = serde_yaml::from_str(
+            r#"
+name: Test Node
+values:
+    length: 3 + 4 * x
+        "#,
+        )
+        .unwrap();
+        assert_eq!(node.name, "Test Node");
+        assert_eq!(node.values["length"], "3 + 4 * x");
     }
 }

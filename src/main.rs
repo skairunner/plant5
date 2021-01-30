@@ -115,14 +115,12 @@ fn update_plants(
                             log::error!("Could not find PlantNode with id {}", parent_node);
                             Vec3::default()
                         });
-                    let parent =
-                        entities
-                            .get(&(plant.id, parent_node))
-                            .copied()
-                            .unwrap_or_else(|| panic!(
-                                "An entity corresponding to the node id {}",
-                                parent_node
-                            ));
+                    let parent = entities
+                        .get(&(plant.id, parent_node))
+                        .copied()
+                        .unwrap_or_else(|| {
+                            panic!("An entity corresponding to the node id {}", parent_node)
+                        });
                     (offset, Some(parent))
                 } else {
                     (Vec3::zero(), None)

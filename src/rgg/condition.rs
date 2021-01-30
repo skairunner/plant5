@@ -1,5 +1,6 @@
 use crate::rgg::Value;
 
+/// Define a condition to match FromNodes against
 #[derive(Debug, PartialEq, Clone)]
 pub enum Condition {
     Equals(Value),

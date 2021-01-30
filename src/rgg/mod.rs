@@ -9,8 +9,10 @@ mod procedures;
 pub mod rgg_graph;
 pub mod rule;
 mod serde;
+pub mod value;
 
 pub use condition::Condition;
-pub use node::{Node, Value};
+pub use node::{FromNode, Node};
 pub use rgg_graph::RggGraph;
-pub use rule::{FromNode, NodeSet, Rule};
+pub use rule::{NodeSet, Rule};
+pub use value::Value;
