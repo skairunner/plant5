@@ -139,7 +139,10 @@ fn update_plants(
                         .get(&(plant.id, parent_node))
                         .copied()
                         .unwrap_or_else(|| {
-                            panic!("An entity corresponding to the node id {}. Graph {:?}", parent_node, plant.graph)
+                            panic!(
+                                "An entity corresponding to the node id {}. Graph {:?}",
+                                parent_node, plant.graph
+                            )
                         });
                     (offset, Some(parent))
                 } else {
@@ -148,10 +151,13 @@ fn update_plants(
                 let rotation = match plant.graph.values.get(&id) {
                     Some(node) => {
                         if node.name == "shoot" {
-                            let degrees = node.values.get("rotation")
+                            let degrees = node
+                                .values
+                                .get("rotation")
                                 .map(|val| val.get::<f32>())
                                 .unwrap_or_else(|| 0.0);
-                            Quat::from_rotation_x((45f32).to_radians()) * Quat::from_rotation_z(degrees.to_radians())
+                            Quat::from_rotation_x((45f32).to_radians())
+                                * Quat::from_rotation_z(degrees.to_radians())
                         } else {
                             Quat::identity()
                         }
@@ -199,6 +205,8 @@ fn update_plants(
                     edit_offsets.insert((plant.id, child), offset);
                 }
             }
+            // End result
+            log::info!("Results: {}", plant.graph.as_dot_string());
         }
     }
 

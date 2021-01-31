@@ -138,7 +138,7 @@ impl Procedure {
                         let context = graph.values.get(&neighbor);
                         proc.new_node.eval(context)
                     }
-                    None => proc.new_node.eval(None)
+                    None => proc.new_node.eval(None),
                 };
                 graph.values.insert(node_id, node);
                 ApplyResult::Added(node_id)
