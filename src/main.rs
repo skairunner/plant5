@@ -17,20 +17,38 @@ struct Tick(u64);
 fn get_test_rules() -> Vec<Rule> {
     serde_yaml::from_str(
         r#"
+# Split stem into two
 - from:
     nodes:
-      - {id: 0, name: "growing tip"}
+        - {id: 0, name: "stem"}
+  to:
+    - add:
+        neighbors: [0]
+        node:
+          name: "stem"
+          values:
+            dir: dir + 1
+# Create a sideshoot if it doesn't already have one
+- from:
+    nodes:
+      - id: 0
+        name: "stem"
+        values:
+          sprouted: [eq, 0]
   to:
     - replace:
         target: 0
         with:
           name: "stem"
           values:
-            len: 1.0
+            sprouted: 1
+            dir: dir
     - add:
         neighbors: [0]
         node:
-          name: "growing tip"
+          name: "shoot"
+          values:
+            rotation: 90 * dir
     "#,
     )
     .unwrap()
@@ -43,8 +61,8 @@ fn get_test_plant(id: usize) -> Plant {
         graph: RggGraph::new(),
     };
     plant.graph.insert_node_with(crate::rgg::Node {
-        name: "growing tip".to_string(),
-        values: Default::default(),
+        name: "stem".to_string(),
+        values: serde_yaml::from_str("{dir: 0, sprouted: 0}").unwrap(),
     });
     plant
 }
@@ -92,16 +110,18 @@ fn update_plants(
     for (node, entity, mesh) in node_query.iter() {
         entities.insert((node.plant_id, node.node_id), entity);
         offsets.insert((node.plant_id, node.node_id), node.node_offset);
-        mesh_handles.insert((node.plant_id, node.node_id), mesh.clone());
+        mesh_handles.insert((node.plant_id, node.node_id), (*mesh).clone());
     }
 
     for (mut plant,) in plant_query.iter_mut() {
-        if tick.0 > 3 && plant.graph.order() < 3 {
+        if tick.0 > 3 && plant.graph.order() < 5 {
             let results = plant.do_rules();
+            log::info!("Rule results for plant {}: {:?}", plant.id, results);
             // Handle added
             for id in results.added {
                 let mesh = get_mesh(&plant.graph.values[&id]);
                 let mesh = meshes.add(mesh);
+                mesh_handles.insert((plant.id, id), mesh.clone());
                 let material = materials.add(StandardMaterial {
                     albedo: Color::rgb(0.5, 0.5, 0.5),
                     ..Default::default()
@@ -119,29 +139,49 @@ fn update_plants(
                         .get(&(plant.id, parent_node))
                         .copied()
                         .unwrap_or_else(|| {
-                            panic!("An entity corresponding to the node id {}", parent_node)
+                            panic!("An entity corresponding to the node id {}. Graph {:?}", parent_node, plant.graph)
                         });
                     (offset, Some(parent))
                 } else {
                     (Vec3::zero(), None)
                 };
+                let rotation = match plant.graph.values.get(&id) {
+                    Some(node) => {
+                        if node.name == "shoot" {
+                            let degrees = node.values.get("rotation")
+                                .map(|val| val.get::<f32>())
+                                .unwrap_or_else(|| 0.0);
+                            Quat::from_rotation_x((45f32).to_radians()) * Quat::from_rotation_z(degrees.to_radians())
+                        } else {
+                            Quat::identity()
+                        }
+                    }
+                    None => Quat::identity(),
+                };
+                let plantnode = PlantNode {
+                    plant_id: plant.id,
+                    node_id: id,
+                    node_offset: Vec3::new(0.0, 0.0, 1.0),
+                };
+                // Need to insert the plantnode into our tracking dict
+                offsets.insert((plant.id, id), plantnode.node_offset);
+
                 let child = commands
-                    .spawn((PlantNode {
-                        plant_id: plant.id,
-                        node_id: id,
-                        node_offset: Vec3::new(0.0, 0.0, 1.0),
-                    },))
+                    .spawn((plantnode,))
                     .with_bundle(PbrBundle {
                         mesh,
                         material,
                         transform: Transform {
                             translation: offset,
+                            rotation,
                             ..Default::default()
                         },
                         ..Default::default()
                     })
                     .current_entity()
                     .expect("that we just spawned an entity");
+
+                entities.insert((plant.id, id), child);
                 if let Some(parent) = parent {
                     commands.push_children(parent, &[child]);
                 }

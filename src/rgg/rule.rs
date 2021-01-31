@@ -40,6 +40,7 @@ pub struct Rule {
 }
 
 /// Tracks the results of executing the entire rule
+#[derive(Debug)]
 pub struct RuleResult {
     pub removed: Vec<usize>,
     pub added: Vec<usize>,

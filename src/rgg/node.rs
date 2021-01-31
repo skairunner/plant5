@@ -62,7 +62,7 @@ impl FromNode {
 /// Define a replacement node.
 /// For replace, can use operations relative to the previous node's values.
 /// For all nodes, can use some operations for values, such as rand
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ToNode {
     pub name: String,
     pub values: HashMap<String, String>,

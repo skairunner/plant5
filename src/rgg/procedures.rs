@@ -1,5 +1,5 @@
 use crate::rgg::rgg_graph::RggGraph;
-use crate::rgg::Node;
+use crate::rgg::{Node, ToNode};
 
 use std::collections::{HashMap, HashSet};
 
@@ -26,7 +26,7 @@ pub struct DeleteProcedure {
 pub struct ReplaceProcedure {
     pub target: i32,
     #[serde(rename = "with")]
-    pub replacement: Node,
+    pub replacement: ToNode,
 }
 
 #[derive(Deserialize, Debug)]
@@ -34,7 +34,7 @@ pub struct AddProcedure {
     /// All the nodes that this new node should have an edge to
     pub neighbors: Vec<i32>,
     #[serde(rename = "node")]
-    pub new_node: Node,
+    pub new_node: ToNode,
 }
 
 #[derive(Debug)]
@@ -102,7 +102,8 @@ impl Procedure {
             },
             Procedure::Replace(proc) => match mapping.get(&proc.target) {
                 Some(target) => {
-                    graph.values.insert(*target, proc.replacement.clone());
+                    let new_node = proc.replacement.eval(graph.values.get(target));
+                    graph.values.insert(*target, new_node);
                     ApplyResult::Modified(*target)
                 }
                 None => {
@@ -111,14 +112,14 @@ impl Procedure {
                 }
             },
             Procedure::Add(proc) => {
-                let node_id = graph.insert_node_with(proc.new_node.clone());
-                let mut ancestored = false;
+                let node_id = graph.insert_node();
+                let mut ancestored = None;
                 for neighbor in &proc.neighbors {
                     match mapping.get(&neighbor) {
                         Some(neighbor) => {
-                            if !ancestored {
+                            if ancestored.is_none() {
                                 graph.graph.add_ancestor(node_id, *neighbor);
-                                ancestored = true;
+                                ancestored = Some(*neighbor);
                             }
                             graph.graph.add_edge(node_id, *neighbor).unwrap();
                         }
@@ -132,6 +133,14 @@ impl Procedure {
                         }
                     }
                 }
+                let node = match ancestored {
+                    Some(neighbor) => {
+                        let context = graph.values.get(&neighbor);
+                        proc.new_node.eval(context)
+                    }
+                    None => proc.new_node.eval(None)
+                };
+                graph.values.insert(node_id, node);
                 ApplyResult::Added(node_id)
             }
             Procedure::Merge(proc) => {

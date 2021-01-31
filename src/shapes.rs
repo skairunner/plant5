@@ -7,7 +7,7 @@ use bevy::render::mesh::{
 
 pub fn get_mesh(node: &Node) -> Mesh {
     match node.name.as_str() {
-        "stem" => {
+        "stem" | "shoot" => {
             let len = node
                 .values
                 .get("len")
