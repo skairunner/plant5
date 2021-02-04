@@ -1,9 +1,18 @@
 // Include primitives for rendering.
 use crate::rgg::Node;
+use bevy::render::color::Color;
 use bevy::render::mesh::{
     shape::{Box, Icosphere},
     Mesh,
 };
+
+pub fn get_color(node: &Node) -> Color {
+    match node.name.as_str() {
+        "stem" => Color::rgb(0.5, 0.5, 0.5),
+        "shoot" => Color::rgb(1.0, 1.0, 1.0),
+        _ => Color::rgb(1.0, 0.0, 1.0),
+    }
+}
 
 pub fn get_mesh(node: &Node) -> Mesh {
     match node.name.as_str() {

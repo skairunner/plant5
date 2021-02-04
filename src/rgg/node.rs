@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::Value;
+use crate::rgg::value::RGGType;
 use crate::rgg::Condition;
 use meval::Context;
 use rand::Rng;
@@ -53,7 +54,18 @@ impl FromNode {
         }
 
         // If any values are specified, need to match conditions.
-        // TODO
+        for (name, condition) in &self.values {
+            let result = match node.values.get(name) {
+                None => false,
+                Some(thing) => match thing.rgg_type {
+                    RGGType::Int => condition.check(thing.get::<i32>()),
+                    RGGType::Float => condition.check(thing.get::<f32>()),
+                },
+            };
+            if !result {
+                return false;
+            }
+        }
 
         true
     }

@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum RGGType {
     Int,
     Float,
@@ -16,6 +16,7 @@ impl Debug for Value {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Value")
             .field("raw_value", &self.raw_value)
+            .field("as float", &self.get::<f32>())
             .field("rgg_type", &self.rgg_type)
             .finish()
     }

@@ -54,10 +54,10 @@ impl RggGraph {
                 Some(node) => node.name.as_str(),
                 None => "",
             };
-            strings.push(format!(r#"{} [label="{}"]"#, *id, name));
+            strings.push(format!(r#"  {} [label="{}"]"#, *id, name));
         }
         for (from, to) in self.graph.edges() {
-            strings.push(format!(r#"{} -- {}"#, *from, *to));
+            strings.push(format!(r#"  {} -- {}"#, *from, *to));
         }
         strings.push("}".to_string());
         strings.join("\n")

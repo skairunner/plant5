@@ -7,23 +7,27 @@ use crate::logger::start_logger;
 use crate::panorbit::{pan_orbit_camera, spawn_camera};
 use crate::rgg::rule::RuleResult;
 use crate::rgg::{RggGraph, Rule};
-use crate::shapes::{get_mesh, stalk};
+use crate::shapes::{get_color, get_mesh, stalk};
 use bevy::ecs::bevy_utils::HashMap;
 use bevy::prelude::*;
 use bevy::utils::AHashExt;
+use gamma::graph::AppendableGraph;
 
 struct Tick(u64);
 
 fn get_test_rules() -> Vec<Rule> {
     serde_yaml::from_str(
         r#"
-# Split stem into two
+# Split a 2stem into a 3stem
 - from:
     nodes:
         - {id: 0, name: "stem"}
+        - {id: 1, name: "stem"}
+    edges:
+        - [0, 1]
   to:
     - add:
-        neighbors: [0]
+        neighbors: [1]
         node:
           name: "stem"
           values:
@@ -64,6 +68,11 @@ fn get_test_plant(id: usize) -> Plant {
         name: "stem".to_string(),
         values: serde_yaml::from_str("{dir: 0, sprouted: 0}").unwrap(),
     });
+    plant.graph.insert_node_with(crate::rgg::Node {
+        name: "stem".to_string(),
+        values: serde_yaml::from_str("{dir: 0, sprouted: 0}").unwrap(),
+    });
+    plant.graph.graph.add_edge(0, 1).unwrap();
     plant
 }
 
@@ -123,7 +132,7 @@ fn update_plants(
                 let mesh = meshes.add(mesh);
                 mesh_handles.insert((plant.id, id), mesh.clone());
                 let material = materials.add(StandardMaterial {
-                    albedo: Color::rgb(0.5, 0.5, 0.5),
+                    albedo: get_color(plant.graph.values.get(&id).unwrap()),
                     ..Default::default()
                 });
                 let parent_node = plant.graph.graph.get_ancestor(id);
@@ -206,7 +215,11 @@ fn update_plants(
                 }
             }
             // End result
-            log::info!("Results: {}", plant.graph.as_dot_string());
+            log::info!(
+                "Results: {}\n    {:?}",
+                plant.graph.as_dot_string(),
+                plant.graph.values
+            );
         }
     }
 
@@ -231,6 +244,20 @@ fn setup(
         .spawn((PlantNode {
             plant_id: 0,
             node_id: 0,
+            node_offset: Vec3::new(0.0, 0.0, 1.0),
+        },))
+        .with_bundle(PbrBundle {
+            mesh: mesh.clone(),
+            material: material.clone(),
+            transform: Transform {
+                translation: Vec3::default(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .spawn((PlantNode {
+            plant_id: 0,
+            node_id: 1,
             node_offset: Vec3::new(0.0, 0.0, 1.0),
         },))
         .with_bundle(PbrBundle {
