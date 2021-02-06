@@ -1,10 +1,12 @@
 mod logger;
 mod panorbit;
+mod plant;
 mod rgg;
 mod shapes;
 
 use crate::logger::start_logger;
 use crate::panorbit::{pan_orbit_camera, spawn_camera};
+use crate::plant::{spawn_node, spawn_plant_nodes};
 use crate::rgg::rule::RuleResult;
 use crate::rgg::{RggGraph, Rule};
 use crate::shapes::{get_color, get_mesh, stalk};
@@ -77,7 +79,7 @@ fn get_test_plant(id: usize) -> Plant {
 }
 
 /// The container for all the actual entities that form a plant.
-struct Plant {
+pub struct Plant {
     pub id: usize,
     pub rules: Vec<Rule>,
     pub graph: RggGraph,
@@ -128,78 +130,16 @@ fn update_plants(
             log::info!("Rule results for plant {}: {:?}", plant.id, results);
             // Handle added
             for id in results.added {
-                let mesh = get_mesh(&plant.graph.values[&id]);
-                let mesh = meshes.add(mesh);
-                mesh_handles.insert((plant.id, id), mesh.clone());
-                let material = materials.add(StandardMaterial {
-                    albedo: get_color(plant.graph.values.get(&id).unwrap()),
-                    ..Default::default()
-                });
-                let parent_node = plant.graph.graph.get_ancestor(id);
-                let (offset, parent) = if let Some(parent_node) = parent_node {
-                    let offset = offsets
-                        .get(&(plant.id, parent_node))
-                        .copied()
-                        .unwrap_or_else(|| {
-                            log::error!("Could not find PlantNode with id {}", parent_node);
-                            Vec3::default()
-                        });
-                    let parent = entities
-                        .get(&(plant.id, parent_node))
-                        .copied()
-                        .unwrap_or_else(|| {
-                            panic!(
-                                "An entity corresponding to the node id {}. Graph {:?}",
-                                parent_node, plant.graph
-                            )
-                        });
-                    (offset, Some(parent))
-                } else {
-                    (Vec3::zero(), None)
-                };
-                let rotation = match plant.graph.values.get(&id) {
-                    Some(node) => {
-                        if node.name == "shoot" {
-                            let degrees = node
-                                .values
-                                .get("rotation")
-                                .map(|val| val.get::<f32>())
-                                .unwrap_or_else(|| 0.0);
-                            Quat::from_rotation_x((45f32).to_radians())
-                                * Quat::from_rotation_z(degrees.to_radians())
-                        } else {
-                            Quat::identity()
-                        }
-                    }
-                    None => Quat::identity(),
-                };
-                let plantnode = PlantNode {
-                    plant_id: plant.id,
-                    node_id: id,
-                    node_offset: Vec3::new(0.0, 0.0, 1.0),
-                };
-                // Need to insert the plantnode into our tracking dict
-                offsets.insert((plant.id, id), plantnode.node_offset);
-
-                let child = commands
-                    .spawn((plantnode,))
-                    .with_bundle(PbrBundle {
-                        mesh,
-                        material,
-                        transform: Transform {
-                            translation: offset,
-                            rotation,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    })
-                    .current_entity()
-                    .expect("that we just spawned an entity");
-
-                entities.insert((plant.id, id), child);
-                if let Some(parent) = parent {
-                    commands.push_children(parent, &[child]);
-                }
+                spawn_node(
+                    id,
+                    &plant,
+                    &mut entities,
+                    &mut offsets,
+                    &mut mesh_handles,
+                    &mut meshes,
+                    &mut materials,
+                    commands,
+                );
             }
             // Handle modified
             for id in results.modified {
@@ -214,6 +154,7 @@ fn update_plants(
                     edit_offsets.insert((plant.id, child), offset);
                 }
             }
+
             // End result
             log::info!(
                 "Results: {}\n    {:?}",
@@ -236,43 +177,12 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = stalk(0.1, 4.0);
-    let mesh = meshes.add(mesh);
-    let material = materials.add(StandardMaterial::default());
-    commands
-        .spawn((get_test_plant(0),))
-        .spawn((PlantNode {
-            plant_id: 0,
-            node_id: 0,
-            node_offset: Vec3::new(0.0, 0.0, 1.0),
-        },))
-        .with_bundle(PbrBundle {
-            mesh: mesh.clone(),
-            material: material.clone(),
-            transform: Transform {
-                translation: Vec3::default(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .spawn((PlantNode {
-            plant_id: 0,
-            node_id: 1,
-            node_offset: Vec3::new(0.0, 0.0, 1.0),
-        },))
-        .with_bundle(PbrBundle {
-            mesh,
-            material,
-            transform: Transform {
-                translation: Vec3::default(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .spawn(LightBundle {
-            transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
-            ..Default::default()
-        });
+    let plant = get_test_plant(0);
+    spawn_plant_nodes(0, &plant, &mut meshes, &mut materials, commands);
+    commands.spawn((plant,)).spawn(LightBundle {
+        transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
+        ..Default::default()
+    });
 }
 
 fn do_tick(mut tick: ResMut<Tick>) {
