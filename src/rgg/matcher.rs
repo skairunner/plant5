@@ -53,15 +53,15 @@ impl<'a> MatchingState<'a> {
 
     /// Find the next tentative match (disregarding edge relations)
     pub fn continue_search(&mut self, rules: &Rule, graph: &RggGraph) -> MatchingDecision {
-        log::info!("Continuing search...");
+        log::debug!("Continuing search...");
         // Exit condition 1: We have found a match that needs to be handled.
         if rules.from.nodes.len() <= self.pattern_index as usize {
-            log::info!("All {} rules were matched.", rules.from.nodes.len());
+            log::debug!("All {} rules were matched.", rules.from.nodes.len());
             return MatchingDecision::Mapped;
         }
         // Exit condition 2: There are no matches at all
         if self.progress[&0] >= graph.graph.order() {
-            log::info!("Reached end of graph. Exiting.");
+            log::debug!("Reached end of graph. Exiting.");
             return MatchingDecision::NoMatch;
         }
         // Scan graph nodes until we find a match.
@@ -72,16 +72,16 @@ impl<'a> MatchingState<'a> {
         let end = self.graph_nodes.len();
 
         let rule_id = self.get_rule_id(rules);
-        log::info!("Scanning for rule {}: {} to {}", rule_id, start, end);
+        log::debug!("Scanning for rule {}: {} to {}", rule_id, start, end);
         for i in start..end {
             // Skip if already matched.
             if self.mapping.contains_key(&rule_id) {
-                log::info!("Skipping rule {} because it was already matched", rule_id);
+                log::debug!("Skipping rule {} because it was already matched", rule_id);
                 continue;
             }
             if rules.from.nodes[self.pattern_index as usize].match_node(&graph.values[&i]) {
                 // Add it as a tentative match
-                log::info!(
+                log::debug!(
                     "Inserting tentative match {}->{}",
                     rule_id,
                     self.graph_nodes[i]
@@ -89,7 +89,7 @@ impl<'a> MatchingState<'a> {
                 self.mapping.insert(rule_id, self.graph_nodes[i]);
                 // Bookmark progress
                 self.progress.insert(self.pattern_index as usize, i + 1);
-                log::info!("Bookmarked {}->{}", self.pattern_index, i + 1);
+                log::debug!("Bookmarked {}->{}", self.pattern_index, i + 1);
                 // Look for next rule.
                 self.pattern_index += 1;
                 return MatchingDecision::Continue;
@@ -120,7 +120,7 @@ impl<'a> MatchingState<'a> {
             let from = &self.mapping[&edge.0];
             let to = &self.mapping[&edge.1];
             if !self.relations.has_edge(*from, *to)? {
-                log::info!("({}, {}) not in graph {:?}", edge.0, edge.1, self.relations);
+                log::debug!("({}, {}) not in graph {:?}", edge.0, edge.1, self.relations);
                 return Ok(false);
             }
         }
@@ -133,7 +133,7 @@ impl<'a> MatchingState<'a> {
         self.pattern_index -= 1;
         let r = self.mapping.remove(&self.get_rule_id(rules));
         if r.is_none() {
-            log::info!("Tried to reset but there was nothing to reset.");
+            log::debug!("Tried to reset but there was nothing to reset.");
         }
     }
 }

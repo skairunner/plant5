@@ -1,5 +1,5 @@
 use crate::rgg::rgg_graph::RggGraph;
-use crate::rgg::{Node, ToNode};
+use crate::rgg::ToNode;
 
 use std::collections::{HashMap, HashSet};
 
@@ -119,6 +119,7 @@ impl Procedure {
                         Some(neighbor) => {
                             if ancestored.is_none() {
                                 graph.graph.add_ancestor(node_id, *neighbor);
+                                log::debug!("Ancestor of {} is {}", node_id, neighbor);
                                 ancestored = Some(*neighbor);
                             }
                             graph.graph.add_edge(node_id, *neighbor).unwrap();

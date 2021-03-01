@@ -84,7 +84,7 @@ impl Rule {
                     result.add_apply_result(apply_result);
                 }
             } else {
-                log::info!("Some targets for Rule apply did not exist and were skipped.");
+                log::debug!("Some targets for Rule apply did not exist and were skipped.");
             }
         }
 

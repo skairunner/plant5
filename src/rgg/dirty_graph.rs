@@ -37,8 +37,8 @@ pub struct DirtyGraph {
     next_generation: u8,
 }
 
-impl DirtyGraph {
-    pub fn new() -> Self {
+impl Default for DirtyGraph {
+    fn default() -> Self {
         Self {
             nodes: Default::default(),
             edges: Default::default(),
@@ -51,7 +51,9 @@ impl DirtyGraph {
             next_generation: 1,
         }
     }
+}
 
+impl DirtyGraph {
     fn add_to_adjacency(&mut self, lhs: usize, rhs: usize) {
         (*self.adjacency.entry(lhs).or_insert_with(std::vec::Vec::new)).push(rhs)
     }

@@ -9,7 +9,7 @@ use crate::panorbit::{pan_orbit_camera, spawn_camera};
 use crate::plant::{spawn_node, spawn_plant_nodes};
 use crate::rgg::rule::RuleResult;
 use crate::rgg::{RggGraph, Rule};
-use crate::shapes::{get_color, get_mesh, stalk};
+use crate::shapes::get_mesh;
 use bevy::ecs::bevy_utils::HashMap;
 use bevy::prelude::*;
 use bevy::utils::AHashExt;
@@ -64,7 +64,7 @@ fn get_test_plant(id: usize) -> Plant {
     let mut plant = Plant {
         id,
         rules: get_test_rules(),
-        graph: RggGraph::new(),
+        graph: RggGraph::default(),
     };
     plant.graph.insert_node_with(crate::rgg::Node {
         name: "stem".to_string(),
@@ -75,6 +75,7 @@ fn get_test_plant(id: usize) -> Plant {
         values: serde_yaml::from_str("{dir: 0, sprouted: 0}").unwrap(),
     });
     plant.graph.graph.add_edge(0, 1).unwrap();
+    plant.graph.graph.add_ancestor(1, 0);
     plant
 }
 
@@ -127,7 +128,7 @@ fn update_plants(
     for (mut plant,) in plant_query.iter_mut() {
         if tick.0 > 3 && plant.graph.order() < 5 {
             let results = plant.do_rules();
-            log::info!("Rule results for plant {}: {:?}", plant.id, results);
+            log::debug!("Rule results for plant {}: {:?}", plant.id, results);
             // Handle added
             for id in results.added {
                 spawn_node(

@@ -22,7 +22,7 @@ pub fn spawn_node(
 
     let mesh = get_mesh(&plant.graph.values[&node_id]);
     let mesh = meshes.add(mesh);
-    mesh_handles.insert(ident.clone(), mesh.clone());
+    mesh_handles.insert(ident, mesh.clone());
     let material = materials.add(StandardMaterial {
         albedo: get_color(plant.graph.values.get(&node_id).unwrap()),
         ..Default::default()
@@ -84,6 +84,7 @@ pub fn spawn_node(
     if let Some(parent) = parent {
         commands.push_children(parent, &[child]);
     } else {
+        log::debug!("State: {:?}", plant.graph.graph);
         log::warn!("Could not find parent node for {:?}", ident)
     }
 }
